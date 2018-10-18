@@ -62,7 +62,7 @@ def calc_sum(article_path, df_dict):
 if __name__ == '__main__':
     global_df_dict = calc_df()
     dirname = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.abspath(os.path.join(dirname, os.pardir))
+    root_dir = os.path.abspath(os.path.join(dirname, os.pardir, os.pardir, os.pardir))
     stories_dir = os.path.join(root_dir, 'cnn_stories')
     time_s = time.time()
     for doc in os.listdir(stories_dir):
