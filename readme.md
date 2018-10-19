@@ -1,6 +1,6 @@
-#Introduction
+# Introduction
 
-we are going to use sigular vector decomposition to extract information from document.
+we are going to use singular vector decomposition to extract information from document.
 
 This class LSA and SVD method only applied for single document. 
 
