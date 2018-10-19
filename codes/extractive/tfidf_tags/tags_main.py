@@ -4,6 +4,7 @@ import time
 import re
 import os.path
 
+
 NUM_TAGS = 20
 NUM_DOCS = 100000
 MIN_NUM_WORDS_IN_SENT = 5
@@ -65,6 +66,7 @@ if __name__ == '__main__':
     root_dir = os.path.abspath(os.path.join(dirname, os.pardir, os.pardir, os.pardir))
     stories_dir = os.path.join(root_dir, 'cnn_stories')
     time_s = time.time()
+    # process first article
     for doc in os.listdir(stories_dir):
         calc_sum(os.path.join(stories_dir, doc), global_df_dict)
         break
