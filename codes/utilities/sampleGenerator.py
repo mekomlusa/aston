@@ -17,10 +17,13 @@ import shutil
 import random
 import argparse
 import os
+import pandas as pd
+import datetime
 
 def sampleGenerator(src_summary, src_text, summary_output, text_output, num_of_samples):
     summaries = os.listdir('%s' % src_summary)
     texts = os.listdir('%s' % src_text)
+    res_list = pd.DataFrame(columns=['text_path','summary_path'])
     if num_of_samples > len(summaries) or num_of_samples > len(texts):
         raise ValueError("ERROR: requested samples are more than the number of files. Aborted")
     if src_text[-1] != '/':
@@ -42,7 +45,23 @@ def sampleGenerator(src_summary, src_text, summary_output, text_output, num_of_s
             text_to_copy = summaries[selected].split("summary")[0]+'.text.txt'
         shutil.copy2(src_summary+summary_to_copy, summary_output)
         shutil.copy2(src_text+text_to_copy, text_output)
+        res_list.loc[x] = [text_to_copy,summary_to_copy]
         added.add(selected)
+        
+    output_file(summary_output, res_list,"datalist")
+        
+# output the dataframes!   
+def output_file(dir, df, filen):
+    # Output the blocking list.
+    today = datetime.datetime.today()
+    outputname = filen+str(today).replace(':','-')+".csv"
+    if dir[-1] != '/':
+        dir += '/'
+    if len(df) > 0:
+        df.to_csv(dir+outputname,sep=',', na_rep=" ", encoding='utf-8', index_label=False, index=False) 
+        print("The script has created "+str(len(df))+" samples today.")
+        print("A summary spreadsheet has been saved under "+dir+" as "+filen)
+
             
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
