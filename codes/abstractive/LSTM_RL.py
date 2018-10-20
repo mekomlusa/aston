@@ -14,21 +14,24 @@ from __future__ import print_function
 from keras.models import Model
 from keras.layers import Input, LSTM, Dense
 import numpy as np
+import pandas as pd
 import os
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 batch_size = 64  # Batch size for training.
 epochs = 20  # Number of epochs to train for.
 latent_dim = 256  # Latent dimensionality of the encoding space.
-num_samples = 100  # Number of samples to train on.
+num_samples = 2000  # Number of samples to train on.
 
-MAX_INPUT_SEQ_LENGTH = 500
-MAX_TARGET_SEQ_LENGTH = 50
-MAX_INPUT_VOCAB_SIZE = 5000
-MAX_TARGET_VOCAB_SIZE = 2000
+MAX_INPUT_SEQ_LENGTH = 3000
+MAX_TARGET_SEQ_LENGTH = 300
+MAX_INPUT_VOCAB_SIZE = 15000
+MAX_TARGET_VOCAB_SIZE = 6000
 
 # data path
-text_path = r"D:\Google Drive\CSCE 638\project\texts"
-summary_path = r"D:\Google Drive\CSCE 638\project\summaries"
+text_path = "/home/rlin225/test/text_2000/"
+summary_path = "/home/rlin225/test/summary_2000/"
+file_list = "/home/rlin225/test/datalist.csv"
 
 """ load the training data."""
 input_seq_max_length = MAX_INPUT_SEQ_LENGTH
@@ -38,34 +41,37 @@ target_texts = []
 input_characters = set()
 target_characters = set()
 
-rawText = os.listdir('%s' % text_path)
-if text_path[:-1] != '\\':
-    text_path += '\\'
+data_df = pd.read_csv(file_list,sep=',',header='infer')
 
-for sample in rawText:
-    with open(text_path+sample, 'r') as rf:
+for i in range(len(data_df)):
+    text_file = text_path+data_df["text_path"][i]
+    with open(text_file, 'r') as rf:
         text = rf.read()
         seq_length = len(text)
     if seq_length > input_seq_max_length:
         text = text[0:input_seq_max_length]
         seq_length = len(text)
     input_texts.append(text)
+    for char in text:
+        if char not in input_characters:
+            input_characters.add(char)
     
-rawSummary = os.listdir('%s' % summary_path)
-if summary_path[:-1] != '\\':
-    summary_path += '\\'
-    
-for sample in rawSummary:
-    with open(summary_path+sample, 'r') as rf:
+    summary_file = summary_path + data_df["summary_path"][i]
+    with open(summary_file, 'r') as rf:
         text = '\t' + rf.read() + '\n'
         seq_length = len(text)
     if seq_length > target_seq_max_length:
         text = text[0:target_seq_max_length]
         seq_length = len(text)
     target_texts.append(text)
+    for char in text:
+        if char not in target_characters:
+            target_characters.add(char)
 
-input_characters = set(input_texts)
-target_characters = set(target_texts)
+#input_characters = set(input_texts)
+#target_characters = set(target_texts)
+#print(input_texts[:5])
+#print(target_texts[:5])
 input_characters = sorted(list(input_characters))
 target_characters = sorted(list(target_characters))
 num_encoder_tokens = len(input_characters)
@@ -83,6 +89,7 @@ input_token_index = dict(
     [(char, i) for i, char in enumerate(input_characters)])
 target_token_index = dict(
     [(char, i) for i, char in enumerate(target_characters)])
+#print(input_token_index)
 
 encoder_input_data = np.zeros(
     (len(input_texts), max_encoder_seq_length, num_encoder_tokens),
