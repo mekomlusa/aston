@@ -1,11 +1,8 @@
-import re
-import os
+from constants import NUM_STORIES, WORD_MIN_LEN
 import csv
 import math
-
-
-WORD_MIN_LEN = 1
-NUM_STORIES = 92579
+import os
+import re
 
 
 def calc_tf(article_file, words_count_dict, is_binary=False):
@@ -30,11 +27,11 @@ def calc_tf(article_file, words_count_dict, is_binary=False):
 
 # return a dict for document frequencies
 def calc_idf(is_binary=False):
-    dirname = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.abspath(os.path.join(dirname, os.pardir, os.pardir, os.pardir))
-    extractive_dir = os.path.abspath(os.path.join(dirname, os.pardir))
+    dir_name = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.abspath(os.path.join(dir_name, os.pardir, os.pardir, os.pardir))
+    extractive_dir = os.path.abspath(os.path.join(dir_name, os.pardir))
     dict_file_name = 'idf_binary.csv' if is_binary else 'idf.csv'
-    dict_file_path = os.path.join(extractive_dir, 'doc_freq', dict_file_name)
+    dict_file_path = os.path.join(extractive_dir, 'utilities', dict_file_name)
     words_count_dict = dict()
     if os.path.isfile(dict_file_path):
         with open(dict_file_path, 'r') as csv_file:
