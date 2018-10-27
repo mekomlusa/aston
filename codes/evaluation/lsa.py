@@ -4,7 +4,7 @@ import numpy as np
 import os
 import sys
 import re
-from Evaluator import Evaluator
+from Evaluator import evaluator
 class Example:
   '''ground truths and words'''
   def __init__(self):
@@ -49,7 +49,7 @@ class lsa:
   def sample(self):
     k = 3
     # file name
-    sampleDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/cnn/sample/'
+    sampleDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/cnn_stories/sample/'
     f = sampleDir + '000c835555db62e319854d9f8912061cdca1893e.story'
     print f
     # read files and turn it into a sentences x words matrix
@@ -87,8 +87,8 @@ class lsa:
 
     pred = [e.sentences[i] for i in top_sentences]
     # print pred
-    evaluate = Evaluator()
-    [P, R, F] = evaluate.Rounge2(pred = (pred), test = (e.ground_truths) )
+    evaluate = evaluator()
+    [P, R, F] = evaluate.rounge2(pred = (pred), test = (e.ground_truths) )
 
     print "P: %s" % P
     print "R: %s" % R
@@ -96,14 +96,14 @@ class lsa:
 
 def main():
   print "main"
-  sampleDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn/sample/'
+  sampleDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn_stories/sample/'
   
   mylsa = lsa()
   mylsa.sample()
 
 
 if __name__ == "__main__":
-  dataDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn/stories/'
+  dataDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn_stories/stories/'
   print "data directory is: " + dataDir
   
   main()
