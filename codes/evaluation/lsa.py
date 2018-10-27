@@ -13,9 +13,6 @@ class Example:
 
 class lsa:
 
-  # def __init__(self):
-    # TODO: 
-  
   def readFile(self, fileName):
     """
      * Code for reading a file. 
@@ -48,49 +45,6 @@ class lsa:
       e.ground_truths.append(parts[id])    
     return e
 
-  # def filterStopWords(self):    
-  #   from nltk.corpus import stopwords
-  #   sw = set(stopwords.words('english'))
-  #   self.wordsFiltered = []
-  #   for word in self.words:
-  #     if not word in sw:
-  #       self.wordsFiltered.add(word)
-  
-  # def evaluate(self, test, pred):
-  #   from collections import Counter
-  #   # print test
-  #   # print "pred:"
-  #   # print pred
-  #   #  diff betwen pred and ground truth ROUNGE 1
-  #   test_words = (re.split('\W+', test))
-  #   pred_words = (re.split('\W+', pred))
-  #   cnts_test = Counter()
-  #   for word in test_words:
-  #     cnts_test[word] += 1
-  #   test_dict = dict(cnts_test)
-
-  #   cnts_pred = Counter()
-  #   for word in pred_words:
-  #     cnts_pred[word] += 1
-  #   pred_dict = dict(cnts_pred)
-
-  #   cnt_extracted = 0
-  #   words_extracted = []
-  #   for word in pred_dict:
-  #     if word in test_dict:
-  #       test_dict[word] -= 1
-  #       if test_dict[word] == 0:
-  #         test_dict.pop(word)
-  #       cnt_extracted += 1
-  #       words_extracted.append(word)
-
-  #   P = float(cnt_extracted) / float(len(pred_words))
-  #   R = float(cnt_extracted) / float(len(test_words))
-  #   F = 2.0 * (P * R) / (P + R)
-
-  #   print "P: %s" % P
-  #   print "R: %s" % R
-  #   print "F-1: %s" % F
 
   def sample(self):
     k = 3
@@ -139,18 +93,11 @@ class lsa:
     print "P: %s" % P
     print "R: %s" % R
     print "F-1: %s" % F
-    # arr[id] *  max
-    # for id in range(17):
-    #   arr[id] * vh[:, k]
-    # print matrix
-
-    
-    # print ' # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
 
 def main():
   print "main"
   sampleDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn/sample/'
-  # print "sample directory is: " + sampleDir
+  
   mylsa = lsa()
   mylsa.sample()
 
@@ -160,7 +107,4 @@ if __name__ == "__main__":
   print "data directory is: " + dataDir
   
   main()
-
-  # FileNames = os.listdir('%s' % os.path.dirname(os.path.abspath(__file__)))
-  # print FileNames
   
