@@ -1,6 +1,7 @@
 from codes.extractive.utilities.calc_freq import calc_idf, calc_tf
 from codes.extractive.utilities.constants import MIN_NUM_WORDS_IN_SENT, NUM_SUM_SENTS
 from heapq import heappush, heappop
+from nltk.tokenize import sent_tokenize
 import os.path
 import re
 import time
@@ -29,25 +30,27 @@ def calc_sum(article_path, idf_dict):
     min_sum_heap = []
     count = 0
     with open(article_path, 'r') as article:
-        line = article.readline()
-        while line:
+        for line in article:
             if line.find('@highlight') != -1:
                 break
-            words = re.findall(r'[a-zA-Z]+', line)
-            sent = line
-            line = article.readline()
-            if len(words) < MIN_NUM_WORDS_IN_SENT:
+            line = line.strip()
+            # skip subtitles
+            if len(line) == 0 or line[-1].isalnum():
                 continue
-
-            score = 0
-            for w in words:
-                if w in tag_tfidf_dict:
-                    score += tag_tfidf_dict[w]
-            heappush(min_sum_heap, (score, sent))
-            if count < NUM_SUM_SENTS:
-                count += 1
-            else:
-                heappop(min_sum_heap)
+            cur_sents = sent_tokenize(line)
+            for sent in cur_sents:
+                words = re.findall(r'[a-zA-Z]+', sent)
+                if len(words) < MIN_NUM_WORDS_IN_SENT:
+                    continue
+                score = 0
+                for w in words:
+                    if w in tag_tfidf_dict:
+                        score += tag_tfidf_dict[w]
+                heappush(min_sum_heap, (score, sent))
+                if count < NUM_SUM_SENTS:
+                    count += 1
+                else:
+                    heappop(min_sum_heap)
 
     sum_list = []
     while len(min_sum_heap) > 0:

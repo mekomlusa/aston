@@ -1,4 +1,5 @@
 from constants import NUM_STORIES, WORD_MIN_LEN
+from nltk.tokenize import sent_tokenize
 import csv
 import math
 import os
@@ -8,12 +9,14 @@ import re
 def calc_tf(article_file, words_count_dict, is_binary=False):
     uniq_words_set = set()
     with open(article_file, 'r') as article:
-        line = article.readline()
-        while line:
+        for line in article:
             if line.find('@highlight') != -1:
                 break
+            line = line.strip()
+            # skip subtitles
+            if len(line) == 0 or line[-1].isalnum():
+                continue
             words = re.findall(r'[a-zA-Z]+', line)
-            line = article.readline()
             for w in words:
                 if len(w) < WORD_MIN_LEN:
                     continue
