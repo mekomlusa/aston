@@ -3,6 +3,10 @@
 Created on Fri Oct 26 21:41:03 2018
 
 @author: Rose
+
+Python 3.5, tested and passed.
+
+Usage: activate a Python 3.5 environment. Run `python netsum.py`.
 """
 from __future__ import division
 import nltk
@@ -10,7 +14,6 @@ from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 import pandas as pd
 import numpy as np
 from collections import Counter
-import h5py
 import os
 import keras
 from sklearn.model_selection import train_test_split
@@ -19,17 +22,35 @@ from keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from nltk.stem import WordNetLemmatizer
 
+# TODO: take path information at runtime
+# Change the paths below based on your cases. There should be a folder saving cleaned news body, a folder saving cleaned summary body,
+# and a file list which saves the mapping before the processed files.
+# The preprocessed step is taken care of by sampleGenerator.py under utilities
 text_path = "/root/nlp_project/cnn/text_samples/"
 summary_path = "/root/nlp_project/cnn/summary_samples/"
 file_list = "/root/nlp_project/cnn/datalist_20K.csv"
 
+# Parameter settings
 # min. input size: 30 (sentences)
 MAX_INPUT_SEQ_LENGTH=30
 BATCH_SIZE = 20
 EPOCHS = 20
 
-# load the data
 def data_prep(text_path, summary_path, file_info, save_transformed_flag, transformed_path=None):
+    '''
+    Load and clean the data for further preparation.
+    
+    Parameters:
+        text_path (str): path to the preprocessed news text folder.
+        summary_path (str): path to the preprocessed summary text folder.
+        file_info (str): path to the mapping file.
+        save_transformed_flag (bool): whether to save the transformed features and labels into .npy files. Coupled with transformed_path.
+        transformed_path (str): path to save the transformed features and labels. Cannot be None if save_transformed_flag == True.
+        
+    Return:
+        X (numpy.ndarray): transformed features.
+        Y (numpy.ndarray): transformed labels.
+    '''
     label = []
     feature= []
     data_df = pd.read_csv(file_list,sep=',',header='infer')
@@ -53,7 +74,7 @@ def data_prep(text_path, summary_path, file_info, save_transformed_flag, transfo
                 all_docs_words_cleaned.append(lemmatizer.lemmatize(w,pos='v'))
             text_word_counter = Counter(all_docs_words_cleaned)
             all_docs_bigram = list(nltk.bigrams(all_docs_words_cleaned))
-            total_num_words = len(all_docs_words_cleaned)
+            total_num_words = len(set(all_docs_words_cleaned))
     
         summary_file = os.path.join(summary_path,data_df["summary_path"][i])
         with open(summary_file, 'r', encoding="utf8") as rf:
@@ -125,15 +146,44 @@ def data_prep(text_path, summary_path, file_info, save_transformed_flag, transfo
     return X, Y
 
 def save_transformed_data(X, Y, saved_path):
+    '''
+    Save the transformed data, X and Y, to the disk.
+    
+    Parameters:
+        X (numpy.ndarray): transformed features from data_prep.
+        Y (numpy.ndarray): transformed labels from data_prep.
+        saved_path (str): path to save the transformed features and labels.
+    '''
     np.save(os.path.join(saved_path,'features.npy'), X)
     np.save(os.path.join(saved_path,'label.npy'), Y)
 
 def load_transformed_data(X_path, Y_path):
+    '''
+    Load the transformed data from the disk.
+    
+    Parameters:
+        X_path (str): path to the saved transformed features.
+        Y_path (str): path to the saved transformed labels.
+    
+    Return:
+        X (numpy.ndarray): transformed features read from file.
+        Y (numpy.ndarray): transformed labels read from file.
+    '''
     X = np.load(X_path)
     Y = np.load(Y_path)
     return X, Y
 
 def rankNet(input_size, pretrained_weights=None):
+    """
+    RankNet algorithm, as proposed in https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/emnlp_svore07.pdf.
+    
+    Parameters:
+        input_size (list): size of the expected input tensor.
+        pretrained_weights (str): path to the pretrained weight file. Not required at the training time, but is needed at the inference time.
+    
+    Return:
+        model (keras.models): a Keras model object.
+    """
     inputs = Input(shape=input_size)
     flat1 = Flatten()(inputs)
     dense1 = Dense(128, activation='relu')(flat1)
@@ -158,6 +208,18 @@ def rankNet(input_size, pretrained_weights=None):
     return model
     
 def training(x_train, y_train, x_test, y_test, filepath, pretrained_weights=None):
+    """
+    Helper method to train a RankNet model.
+    
+    Parameters:
+        x_train (numpy.ndarray): training set of the features.
+        y_train (numpy.ndarray): training set of the labels.
+        x_test (numpy.ndarray): testing set of the features.
+        y_test (numpy.ndarray): testing set of the labels.
+        filepath (str): path to save related information of the training data, i.e. checkpoint and the final model weight file.
+        pretrained_weights (str): path to the pretrained weight file. Helpful when the training stops unexpectedly, and one would like to
+        resume training.
+    """
     model = rankNet(x_train.shape[1:], pretrained_weights=pretrained_weights)
     
     # callback information
@@ -173,13 +235,25 @@ def training(x_train, y_train, x_test, y_test, filepath, pretrained_weights=None
     model.save_weights(os.path.join(filepath, 'rankNet.h5'))
     
 def inference(x_test, y_test, pretrained_weights):
+    """
+    Helper method to load a RankNet model and run predictions.
+    
+    Parameters:
+        x_test (numpy.ndarray): testing set of the features.
+        y_test (numpy.ndarray): testing set of the labels.
+        pretrained_weights (str): path to the pretrained weight file. Required to initiate a RankNet model.
+        
+    Return:
+        preds (list of list): predictions for all the testing files. Each file will have a prediction of size 30 x 1, indicating the probability
+        of each sentence being extracted as a summary sentence.
+    """
     model = rankNet(x_test.shape[1:], pretrained_weights=pretrained_weights)
     x_test_reshaped = np.reshape(x_test,(len(x_test),x_test.shape[1],x_test.shape[2]))
     preds = model.predict(x_test_reshaped,verbose=0)
     preds = preds.tolist()
     return preds
     
-    
+# main method
 if __name__ == "__main__":
     choice = input("Training or inference? (0 for training, 1 for inference) ")
     while choice != '1' and choice != '0':
