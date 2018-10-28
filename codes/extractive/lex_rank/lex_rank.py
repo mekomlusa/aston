@@ -1,6 +1,8 @@
 from codes.extractive.utilities.calc_freq import calc_idf
 from codes.extractive.utilities.constants import MIN_NUM_WORDS_IN_SENT, NUM_STORIES, NUM_SUM_SENTS, WORD_MIN_LEN, \
     ZERO_THRESHOLD
+from codes.extractive.utilities.get_ground_truth_sum import get_ground_truth_sum
+from codes.evaluation.Evaluator import Evaluator
 from heapq import heappush, heappop
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
@@ -118,6 +120,15 @@ def process_article_file(file_path, is_damped=False):
     return res_list
 
 
+def test_evaluation():
+    story_path = '/Users/skin/projects/aston/cnn_stories/0a0adc84ccbf9414613e145a3795dccc4828ddd4.story'
+    ground_truth_sums = get_ground_truth_sum(story_path)
+    cur_sums = process_article_file(story_path)
+    ev = Evaluator()
+    print("lex rank")
+    ev.print_rouge_1_2(ground_truth_sums, cur_sums)
+
+
 if __name__ == '__main__':
     IDF_DICT = calc_idf()
     STOP_WORDS = set(stopwords.words('english'))
@@ -130,7 +141,4 @@ if __name__ == '__main__':
     #         print(s)
     #     break
 
-    story_path = '/Users/skin/projects/aston/cnn_stories/0a0adc84ccbf9414613e145a3795dccc4828ddd4.story'
-    sums = process_article_file(story_path)
-    for sum in sums:
-        print(sum)
+    test_evaluation()

@@ -1,5 +1,4 @@
 from constants import NUM_STORIES, WORD_MIN_LEN
-from nltk.tokenize import sent_tokenize
 import csv
 import math
 import os
