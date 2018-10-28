@@ -121,7 +121,7 @@ def process_article_file(file_path, is_damped=False):
 
 
 def test_evaluation():
-    story_path = '/Users/skin/projects/aston/cnn_stories/0a0adc84ccbf9414613e145a3795dccc4828ddd4.story'
+    story_path = os.path.join(stories_dir, '0a0adc84ccbf9414613e145a3795dccc4828ddd4.story')
     ground_truth_sums = get_ground_truth_sum(story_path)
     cur_sums = process_article_file(story_path)
     ev = Evaluator()
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     STOP_WORDS = set(stopwords.words('english'))
     dir_name = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.abspath(os.path.join(dir_name, os.pardir, os.pardir, os.pardir))
-    # stories_dir = os.path.join(root_dir, 'cnn_stories')
+    stories_dir = os.path.join(root_dir, 'cnn_stories')
     # for doc in os.listdir(stories_dir):
     #     sums = process_article_file(os.path.join(stories_dir, doc))
     #     for s in sums:
