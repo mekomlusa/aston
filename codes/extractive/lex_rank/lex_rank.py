@@ -1,8 +1,11 @@
 from codes.extractive.utilities.calc_freq import calc_idf
 from codes.extractive.utilities.constants import MIN_NUM_WORDS_IN_SENT, NUM_STORIES, NUM_SUM_SENTS, WORD_MIN_LEN, \
     ZERO_THRESHOLD
+from codes.extractive.utilities.get_ground_truth_sum import get_ground_truth_sum
+from codes.evaluation.Evaluator import Evaluator
 from heapq import heappush, heappop
 from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize
 import math
 import numpy as np
 import os.path
@@ -89,10 +92,18 @@ def calc_lex_rank_scores(sents, is_damped=False):
 
 def process_article_file(file_path, is_damped=False):
     sents = []
-    with open(file_path, 'r') as file:
-        for line in file:
-            if len(line) >= MIN_NUM_WORDS_IN_SENT:
-                sents.append(line)
+    with open(file_path, 'r') as article_file:
+        for line in article_file:
+            if line.find('@highlight') != -1:
+                break
+            line = line.strip()
+            # skip subtitles
+            if len(line) == 0 or line[-1].isalnum():
+                continue
+            cur_sents = sent_tokenize(line)
+            for s in cur_sents:
+                if len(s) >= MIN_NUM_WORDS_IN_SENT:
+                    sents.append(s)
     scores = calc_lex_rank_scores(sents, is_damped)
     min_heap = []
     count = 0
@@ -109,13 +120,25 @@ def process_article_file(file_path, is_damped=False):
     return res_list
 
 
+def test_evaluation():
+    story_path = os.path.join(stories_dir, '0a0adc84ccbf9414613e145a3795dccc4828ddd4.story')
+    ground_truth_sums = get_ground_truth_sum(story_path)
+    cur_sums = process_article_file(story_path)
+    ev = Evaluator()
+    print("lex rank")
+    ev.print_rouge_1_2(ground_truth_sums, cur_sums)
+
+
 if __name__ == '__main__':
     IDF_DICT = calc_idf()
     STOP_WORDS = set(stopwords.words('english'))
     dir_name = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.abspath(os.path.join(dir_name, os.pardir, os.pardir, os.pardir))
     stories_dir = os.path.join(root_dir, 'cnn_stories')
-    for doc in os.listdir(stories_dir):
-        sums = process_article_file(os.path.join(stories_dir, doc))
-        print(sums)
-        break
+    # for doc in os.listdir(stories_dir):
+    #     sums = process_article_file(os.path.join(stories_dir, doc))
+    #     for s in sums:
+    #         print(s)
+    #     break
+
+    test_evaluation()
