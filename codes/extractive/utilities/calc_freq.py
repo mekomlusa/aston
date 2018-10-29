@@ -65,7 +65,7 @@ def calc_idf(is_binary=False, choice=0):
         stories_dir = os.path.join(root_dir, 'cnn_stories')
         i = 0
         for doc in os.listdir(stories_dir):
-            calc_tf(os.path.join(stories_dir, doc), words_count_dict, is_binary)
+            calc_tf(os.path.join(stories_dir, doc), words_count_dict, is_binary, choice)
             print i
             i += 1
 
@@ -77,4 +77,4 @@ def calc_idf(is_binary=False, choice=0):
 
 
 if __name__ == '__main__':
-    calc_idf(choice=2)
+    calc_idf(choice=1)
