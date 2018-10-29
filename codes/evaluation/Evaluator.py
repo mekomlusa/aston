@@ -49,9 +49,9 @@ class Evaluator:
                 cnt_found_pair += 1
 
         # precision and recall and f1 score,
-        P = float(cnt_found_pair) / float(cnt_pred_pair)
-        R = float(cnt_found_pair) / float(cnt_test_pair)
-        F = 2.0 * (P * R) / (P + R)
+        P = float(cnt_found_pair) / float(cnt_pred_pair) if cnt_pred_pair != 0 else 0.0
+        R = float(cnt_found_pair) / float(cnt_test_pair) if cnt_test_pair != 0 else 0.0
+        F = 2.0 * (P * R) / (P + R) if cnt_found_pair != 0 else 0.0
 
         return [P, R, F]
 
@@ -119,9 +119,9 @@ class Evaluator:
                 cnt_extracted += 1
 
         # precision and recall and f1 score,
-        P = float(cnt_extracted) / float(len(pred_words))
-        R = float(cnt_extracted) / float(len(test_words))
-        F = 2.0 * (P * R) / (P + R)
+        P = float(cnt_extracted) / float(len(pred_words)) if len(pred_words) != 0 else 0.0
+        R = float(cnt_extracted) / float(len(test_words)) if len(test_words) != 0 else 0.0
+        F = 2.0 * (P * R) / (P + R) if cnt_extracted != 0 else 0.0
 
         return [P, R, F]
 
