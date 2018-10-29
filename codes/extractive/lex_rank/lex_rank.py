@@ -23,16 +23,20 @@ STEMMER = PorterStemmer()
 LEMMATIZER = WordNetLemmatizer()
 
 
-def idf_modified_cosine(s1, s2, idf_dict, choice):
+def idf_modified_cosine(s1, s2, idf_dict, stem_dict, choice):
     tf_count_dict1 = dict()
     tf_count_dict2 = dict()
     for w in re.findall(r'[a-zA-Z]+', s1):
         if w in STOP_WORDS:
             continue
-        if choice == 1:
-            w = STEMMER.stem(w)
-        elif choice == 2:
-            w = LEMMATIZER.lemmatize(w, pos='v')
+        if choice != 0:
+            if w in stem_dict:
+                w = stem_dict[w]
+            else:
+                w_stem = STEMMER.stem(w) if choice == 1 else LEMMATIZER.lemmatize(w, pos='v')
+                stem_dict[w] = w_stem
+                w = w_stem
+
         if len(w) < WORD_MIN_LEN:
             continue
         tf_count_dict1[w] = tf_count_dict1[w] + 1 if w in tf_count_dict1 else 1
@@ -86,10 +90,10 @@ def calc_lex_rank_scores(sents, idf_dict, is_damped=False, choice=0):
     num_sents = len(sents)
     cos_mat = np.zeros((num_sents, num_sents))
     deg = np.zeros((num_sents, 1))
-
+    stem_dict = dict()
     for i in range(0, num_sents):
         for j in range(0, num_sents):
-            cos_mat[i][j] = idf_modified_cosine(sents[i], sents[j], idf_dict, choice)
+            cos_mat[i][j] = idf_modified_cosine(sents[i], sents[j], idf_dict, stem_dict, choice)
             if cos_mat[i][j] > COS_THRESHOLD:
                 cos_mat[i][j] = 1.0
                 deg[i] += 1
@@ -191,16 +195,16 @@ if __name__ == '__main__':
     stories_dir = os.path.join(root_dir, 'cnn_stories')
     # story_file_path = os.path.join(stories_dir, '0a0adc84ccbf9414613e145a3795dccc4828ddd4.story')
     # test_evaluation(story_file_path)
-    num_test_files = 200
+    num_test_files = 100
     print('original')
     test_evaluation_batch(stories_dir, num_test_files, idf_dict_original)
     print('\ndamped')
     test_evaluation_batch(stories_dir, num_test_files, idf_dict_original, is_damped=True)
     print('\nbinary')
     test_evaluation_batch(stories_dir, num_test_files, idf_dict_original_bi)
-    # print('\nstemming')
-    # test_evaluation_batch(stories_dir, num_test_files, idf_dict_stem, choice=1)
-    # print('\nlemma')
-    # test_evaluation_batch(stories_dir, num_test_files, idf_dict_lemma, choice=2)
+    print('\nstemming')
+    test_evaluation_batch(stories_dir, num_test_files, idf_dict_stem, choice=1)
+    print('\nlemma')
+    test_evaluation_batch(stories_dir, num_test_files, idf_dict_lemma, choice=2)
 
 
