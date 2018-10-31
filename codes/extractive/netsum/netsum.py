@@ -21,6 +21,7 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling2D, Input
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from nltk.stem import WordNetLemmatizer
+import csv
 
 # TODO: take path information at runtime
 # Change the paths below based on your cases. There should be a folder saving cleaned news body, a folder saving cleaned summary body,
@@ -29,6 +30,7 @@ from nltk.stem import WordNetLemmatizer
 text_path = "/root/nlp_project/cnn/text_samples/"
 summary_path = "/root/nlp_project/cnn/summary_samples/"
 file_list = "/root/nlp_project/cnn/datalist_20K.csv"
+news_words_path = "/root/nlp_project/cnn/idf.csv"
 
 # Parameter settings
 # min. input size: 30 (sentences)
@@ -36,7 +38,7 @@ MAX_INPUT_SEQ_LENGTH=30
 BATCH_SIZE = 20
 EPOCHS = 20
 
-def data_prep(text_path, summary_path, file_info, save_transformed_flag, transformed_path=None):
+def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
     Load and clean the data for further preparation.
     
@@ -56,6 +58,13 @@ def data_prep(text_path, summary_path, file_info, save_transformed_flag, transfo
     data_df = pd.read_csv(file_list,sep=',',header='infer')
     word_tokenizer = RegexpTokenizer(r'\w+')
     lemmatizer = WordNetLemmatizer()
+    # Read the news word corpus.
+    reader = csv.reader(open(news_words_path, 'r'))
+    news_words = {}
+    for row in reader:
+       k, v = row
+       news_words[k] = float(v)
+    
     
     for i in range(len(data_df)):
         if i % 100 == 0:
@@ -70,8 +79,11 @@ def data_prep(text_path, summary_path, file_info, save_transformed_flag, transfo
             all_docs_words = word_tokenizer.tokenize(text)
             all_docs_words_cleaned = []
             # add lemmatization here.
-            for w in all_docs_words:
-                all_docs_words_cleaned.append(lemmatizer.lemmatize(w,pos='v'))
+            if is_lemmatize:
+                for w in all_docs_words:
+                    all_docs_words_cleaned.append(lemmatizer.lemmatize(w,pos='v'))
+            else:
+                all_docs_words_cleaned = all_docs_words
             text_word_counter = Counter(all_docs_words_cleaned)
             all_docs_bigram = list(nltk.bigrams(all_docs_words_cleaned))
             total_num_words = len(set(all_docs_words_cleaned))
@@ -81,9 +93,12 @@ def data_prep(text_path, summary_path, file_info, save_transformed_flag, transfo
             text = rf.read()
             summary_array = word_tokenizer.tokenize(text)
             summary_array_cleaned = []
-            # add lemmatization here.
-            for w in summary_array:
-                summary_array_cleaned.append(lemmatizer.lemmatize(w,pos='v'))
+            if is_lemmatize:
+                # add lemmatization here.
+                for w in summary_array:
+                    summary_array_cleaned.append(lemmatizer.lemmatize(w,pos='v'))
+            else:
+                summary_array_cleaned = summary_array
         
         # focing the same shape.
         if len(text_sents) > MAX_INPUT_SEQ_LENGTH:
@@ -92,40 +107,61 @@ def data_prep(text_path, summary_path, file_info, save_transformed_flag, transfo
             continue
         else:
             padding_needed = True
-            
+           
+        #print(text_file)
         # Calculating rouge1 label, as described in the paper.
+        # Currently 7 features:
+        # is_first_sentence: whether this is the first sentence or not. sent_position: sentence position within the text. sum_basic_score:
+        # sum basic score (unigram). sum_bigram_score: sum basic score (bigrams). sent_sim_to_summ: score that measures the similarity between
+        # the sentence and the summary. sum_idf: sum of the idf score for this sentence. avg_idf: average of the idf score for this sentence.
         for j in range(len(text_sents)):
             both_occur = 0
             cum_prob_word = 0
             cum_prob_bigram = 0
             word_array = word_tokenizer.tokenize(text_sents[j])
+            is_first_sentence = 0
+            if j == 0:
+                is_first_sentence = 1
+            sent_position = j / len(text_sents)
+            # get the rouge1 score here and append to the vector.
+            label_list.append(both_occur/len(summary_array_cleaned))
+            if len(word_array) == 0:
+                # for sentence like "...", there is no way to calculate sum basic related scores. So just skip them.
+                feature_list.append([is_first_sentence, sent_position, 0,0,0,0,0])
+                continue
+            sum_idf = 0
             word_array_clean = []
             for w in word_array:
-                word_array_clean.append(lemmatizer.lemmatize(w,pos='v'))
+                if is_lemmatize:
+                    word_array_clean.append(lemmatizer.lemmatize(w,pos='v'))
+                sum_idf += news_words.get(w,0)
+            if not is_lemmatize:
+                word_array_clean = word_array
+            avg_idf = sum_idf / len(word_array)
             all_sent_bigram = list(nltk.bigrams(word_array_clean))
             for w in word_array_clean:
                 if w in summary_array_cleaned:
                     both_occur += 1
                 cum_prob_word += text_word_counter[w] / total_num_words
+                
             for bg in all_sent_bigram:
                 cum_prob_bigram += all_docs_bigram.count(bg) / len(all_docs_bigram)
-            # get the rouge1 score here and append to the vector.
-            label_list.append(both_occur/len(summary_array_cleaned))
             # get other X features here.
-            is_first_sentence = 0
-            if j == 0:
-                is_first_sentence = 1
-            sent_position = j / len(text_sents)
-            sum_basic_score = cum_prob_word / len(text_sents)
-            sum_bigram_score = cum_prob_bigram / (len(text_sents) - 1)
-            feature_list.append([is_first_sentence, sent_position, sum_basic_score, sum_bigram_score])
+            sum_basic_score = cum_prob_word / len(set(word_array_clean))
+            if len(set(word_array_clean)) > 1:
+                sum_bigram_score = cum_prob_bigram / (len(set(word_array_clean)) - 1)
+            else:
+                # this sentence really has no bigram.
+                sum_bigram_score = 0
             # TODO: add more features here
+            sent_sim_to_summ = (both_occur/len(summary_array_cleaned)) / len(set(word_array_clean))
+            feature_list.append([is_first_sentence, sent_position, sum_basic_score, sum_bigram_score, sent_sim_to_summ, sum_idf, avg_idf])
         
         # for padding (manual)
         if padding_needed:
             for _ in range(len(text_sents),MAX_INPUT_SEQ_LENGTH):
                 label_list.append(0)
-                feature_list.append([0]*4)
+                feature_list.append([0]*7)
         
         label.append(label_list)
         feature.append(feature_list)
@@ -255,6 +291,7 @@ def inference(x_test, y_test, pretrained_weights):
     
 # main method
 if __name__ == "__main__":
+    is_lemmatize = False
     choice = input("Training or inference? (0 for training, 1 for inference) ")
     while choice != '1' and choice != '0':
         choice = input("Training or inference? (0 for training, 1 for inference) ")
@@ -275,9 +312,9 @@ if __name__ == "__main__":
                 saved_tranformed_data = input("Do you want to save transformed data? (Y/N)")
             if saved_tranformed_data.lower() == 'y':
                 transformed_path = input("Please specify the path where you'd like to save your transformed data to:")
-                X, Y = data_prep(text_path, summary_path, file_list, True, transformed_path)
+                X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, True, transformed_path)
             else:
-                X, Y = data_prep(text_path, summary_path, file_list, False)
+                X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
         # splitting the data into training & testing set
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
         print("Size of the training set:",X_train.shape)
@@ -288,7 +325,7 @@ if __name__ == "__main__":
         # inference mode
         print("Making predictions.")
         file_list = input("Please specify the testing file list: ")
-        X, Y = data_prep(text_path, summary_path, file_list, False)
+        X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
         pretrained_weights = input("Where is the saved model weights?")
         predictions = inference(X, Y, pretrained_weights)
         data_df = pd.read_csv(file_list,sep=',',header='infer')
