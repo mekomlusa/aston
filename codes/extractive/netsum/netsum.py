@@ -21,6 +21,7 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling2D, Input
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from nltk.stem import WordNetLemmatizer
+from codes.evaluation.Evaluator import Evaluator
 import csv
 
 # TODO: take path information at runtime
@@ -270,13 +271,12 @@ def training(x_train, y_train, x_test, y_test, filepath, pretrained_weights=None
                   shuffle=True)
     model.save_weights(os.path.join(filepath, 'rankNet.h5'))
     
-def inference(x_test, y_test, pretrained_weights):
+def inference(x_test, pretrained_weights):
     """
     Helper method to load a RankNet model and run predictions.
     
     Parameters:
         x_test (numpy.ndarray): testing set of the features.
-        y_test (numpy.ndarray): testing set of the labels.
         pretrained_weights (str): path to the pretrained weight file. Required to initiate a RankNet model.
         
     Return:
@@ -288,6 +288,42 @@ def inference(x_test, y_test, pretrained_weights):
     preds = model.predict(x_test_reshaped,verbose=0)
     preds = preds.tolist()
     return preds
+
+def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
+    """
+    Helper method to get the evaluation metric results (i.e. Rouge1 and 2).
+    
+    Parameters:
+        num_files (int): Number of files in a batch.
+        all_pred_summary (list of list): list of predicted summaries, with each element containing a series of summary sentences.
+        all_actual_summary (list of list): list of actual summaries, with each element containing a series of summary sentences.
+    """
+    ev = Evaluator()
+    global_p1 = 0.0
+    global_r1 = 0.0
+    global_f1 = 0.0
+    global_p2 = 0.0
+    global_r2 = 0.0
+    global_f2 = 0.0
+    
+    for i in len(num_files):
+        [p1, r1, f1] = ev.rounge1(all_pred_summary[i], all_actual_summary[i])
+        [p2, r2, f2] = ev.rounge2(all_pred_summary[i], all_actual_summary[i])
+        global_p1 += p1
+        global_r1 += r1
+        global_f1 += f1
+        global_p2 += p2
+        global_r2 += r2
+        global_f2 += f2
+
+    print('Rouge 1 results')
+    print('Avg. P of {0} samples in rounge 1: {1}'.format(num_files, global_p1 / num_files))
+    print('Avg. R of {0} samples in rounge 1: {1}'.format(num_files, global_r1 / num_files))
+    print('Avg. F-1 of {0} samples in rounge 1: {1}'.format(num_files, global_f1 / num_files))
+    print('Rouge 2 results')
+    print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
+    print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
+    print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
     
 # main method
 if __name__ == "__main__":
@@ -323,11 +359,13 @@ if __name__ == "__main__":
         training(X_train, y_train, X_test, y_test, filepath)
     else:
         # inference mode
+        all_predicted_summary = []
+        all_actual_summary = []
         print("Making predictions.")
         file_list = input("Please specify the testing file list: ")
         X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
         pretrained_weights = input("Where is the saved model weights?")
-        predictions = inference(X, Y, pretrained_weights)
+        predictions = inference(X, pretrained_weights)
         data_df = pd.read_csv(file_list,sep=',',header='infer')
         word_tokenizer = RegexpTokenizer(r'\w+')
         
@@ -336,12 +374,23 @@ if __name__ == "__main__":
             with open(text_file, 'r', encoding="utf8") as rf:
                 text = rf.read()
                 text_sents = sent_tokenize(text)
+            # handle short articles
+            if len(text_sents) < 30:
+                for _ in range(len(text_sents),30):
+                    text_sents.append("")
             pred_best_three = sorted(range(len(predictions[i])), key=lambda j: predictions[i][j], reverse=True)[:3]
-            generated_summary = " ".join([text_sents[num] for num in pred_best_three])
+            print("Working on text file:",text_file)
+            #print(pred_best_three)
+            generated_summary = " ".join([text_sents[num] for num in pred_best_three if text_sents[num] != ""])
             print("Generated summary:",generated_summary)
+            all_predicted_summary.append(sent_tokenize(generated_summary))
             
             summary_file = summary_path + data_df["summary_path"][i]
             with open(summary_file, 'r', encoding="utf8") as rf:
                 text = rf.read()
             print("Actual summary:",text)
             print("")
+            all_actual_summary.append(sent_tokenize(text))
+            
+        # Rogue 1 and 2 evaluations
+        test_evaluation_batch(len(data_df), all_predicted_summary, all_actual_summary)
