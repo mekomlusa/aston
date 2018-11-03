@@ -8,7 +8,10 @@ Python 3.5, tested and passed.
 
 Usage: activate a Python 3.5 environment. Run `python netsum.py`.
 """
-from __future__ import division
+# configuring for the code evaluation part
+import sys
+sys.path.append('../../../')
+
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 import pandas as pd
