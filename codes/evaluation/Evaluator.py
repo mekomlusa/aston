@@ -14,13 +14,13 @@ class Evaluator:
         self.print_rouge_1_2(predict, ground_truth)
 
     def print_rouge_1_2(self, pred, test):
-        print "rounge1"
+        print("rounge1")
         [p, r, f] = self.rounge1(pred=pred, test=test)
         print("P: %s" % p)
         print("R: %s" % r)
         print("F-1: %s" % f)
 
-        print "rounge2"
+        print("rounge2")
         [p, r, f] = self.rounge2(pred=pred, test=test)
 
         print("P: %s" % p)
