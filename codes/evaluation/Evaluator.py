@@ -1,5 +1,10 @@
 import numpy as np
 import re
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+
+STEMMER = PorterStemmer()
+LEMMATIZER = WordNetLemmatizer()
+
 class evaluator:
 
     def sample(self):
@@ -10,30 +15,56 @@ class evaluator:
         predict = ['Pope Francis said Sunday that he would hold a meeting of cardinals on February 14 \"during which I will name 15 new Cardinals who, coming from 13 countries from every continent, manifest the indissoluble links between the Church of Rome and the particular Churches presentin the world,\" according to Vatican Radio.', 
                 'Christopher Bellitto, a professor of church history at Kean University in New Jersey, noted that Francis announced his new slate of cardinals on the Catholic Feast of the Epiphany, which commemorates the visit of the Magi to Jesus\' birthplace in Bethlehem.', 
                 'Beginning in the 1920s, an increasing number of Latin American churchmen were named cardinals, and in the 1960s, St. John XXIII, whom Francis canonized last year, appointed the first cardinals from Japan, the Philippines and Africa.']
-        print "rounge1"
+        print "rounge1 without stemming and lemma"
+        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem=False )
+        print "P: %s" % P
+        print "R: %s" % R
+        print "F-1: %s" % F
+
+        print "rounge1 only with stemming"
         [P, R, F] = self.rounge1(pred = predict, test = ground_truth )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
-        print "rounge2"
+        print "rounge1 only with lemma"
+        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem= False, lemma=True )
+        print "P: %s" % P
+        print "R: %s" % R
+        print "F-1: %s" % F
+
+        print "rounge2 without stemming and lemma"
+        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem=False )
+        print "P: %s" % P
+        print "R: %s" % R
+        print "F-1: %s" % F
+
+        print "rounge2 only with lemma"
+        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem= False, lemma=True )
+        print "P: %s" % P
+        print "R: %s" % R
+        print "F-1: %s" % F
+
+        print "rounge2 only with stemming"
         [P, R, F] = self.rounge2(pred = predict, test = ground_truth )
-        
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
 
-    def rounge2(self, test, pred):
+    def rounge2(self, test, pred, stem = True, lemma = False):
         '''
         @params
         test: human made test sentences list of strings
         pred: predicted sentences list of strings
+        stem: true means we apply stemmer on test and pred sentences
+        lemma: whether we apply lemmarization on test and pref sentences
         @return
         p, r, f
         '''
-        test_word_pair_dict, cnt_test_pair = self.count_word_pairs(test)
-        predWordPairDict, cnt_pred_pair = self.count_word_pairs(pred)
+
+        test_word_pair_dict, cnt_test_pair = self.count_word_pairs(test, stem, lemma)
+        predWordPairDict, cnt_pred_pair = self.count_word_pairs(pred, stem, lemma)
 
         # compare words in test and pred, if words exist in test and both in pred, we record this word, cnt++, cnts for all times the words appears instead of unique words
         cnt_found_pair = 0
@@ -51,10 +82,12 @@ class evaluator:
 
         return [P, R, F]
 
-    def count_word_pairs(self, sentences_list):
+    def count_word_pairs(self, sentences_list, stem, lemma):
         '''
         @params
         word_list sentences list of strings
+        stem: true means we apply stemmer on test and pred sentences
+        lemma: whether we apply lemmarization on test and pref sentences
         @return
         dictionary for all word pairs appearing in the passage
         '''
@@ -63,6 +96,13 @@ class evaluator:
         #  cnts for word pairs, for start words, marked as (*, word), for end words, marked as (word, #)
         for sentence in sentences_list:
             word_list = re.split('\W+', sentence)
+            if stem:
+                word_list = self.pre_processing(word_list, stem)
+            elif lemma:
+                word_list = self.pre_processing(word_list, False)
+            else:
+                pass
+                # donothing
             cnt += 1 + len(word_list)
             for id in range(len(word_list)):
                 if id == 0:
@@ -82,18 +122,31 @@ class evaluator:
 
         return [pairs, cnt]
 
-    def rounge1(self, test, pred):
+    def rounge1(self, test, pred, stem = True, lemma = False):
         '''
         @params
         test: human made test sentences list of strings
         pred: predicted sentences list of strings
+        stem: true means we apply stemmer on test and pred sentences
+        lemma: whether we apply lemmarization on test and pref sentences
         @return
         P, R, F
         '''
         from collections import Counter
+
         #cnts for all words in test cases and ground truth cases
         test_words = re.split('\W+', " ".join(test))
         pred_words = re.split('\W+', " ".join(pred))
+        # print test_words
+        if stem:
+            test_words = self.pre_processing(test_words, stem)
+            pred_words = self.pre_processing(pred_words, stem)
+        elif lemma:
+            test_words = self.pre_processing(test_words, False)
+            pred_words = self.pre_processing(pred_words, False)
+        else:
+            pass
+            # do nothing
         cnts_test = Counter()
         for word in test_words:
             cnts_test[word] += 1
@@ -119,6 +172,23 @@ class evaluator:
         F = 2.0 * (P * R) / (P + R)
 
         return [P, R, F]
+
+    def pre_processing(self, wordList, stem):
+        '''
+        @params:
+        wordlist: a list of words, 
+        stem: apply stem or lemma
+        lemma: pos default is n, but here was set to be v, 
+        an experiment based on sample function shows the performance with 'v' is better.
+        @return:
+        a list of words after operations
+        '''
+        res = []
+        for w in wordList:
+            w_stem = STEMMER.stem(w) if stem else LEMMATIZER.lemmatize(w, pos='v')
+            res.append(w_stem)
+        return res
+
 
 if __name__ == '__main__':
     test = evaluator()

@@ -46,12 +46,8 @@ class lsa:
     return e
 
 
-  def sample(self):
+  def sample(self, f):
     k = 3
-    # file name
-    sampleDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/cnn_stories/sample/'
-    f = sampleDir + '000c835555db62e319854d9f8912061cdca1893e.story'
-    print f
     # read files and turn it into a sentences x words matrix
     e = self.readFile(f)
     matrix = {}
@@ -88,19 +84,47 @@ class lsa:
     pred = [e.sentences[i] for i in top_sentences]
     # print pred
     evaluate = evaluator()
-    [P, R, F] = evaluate.rounge2(pred = (pred), test = (e.ground_truths) )
+    [P, R, F] = evaluate.rounge1(pred = (pred), test = (e.ground_truths) )
 
-    print "P: %s" % P
-    print "R: %s" % R
-    print "F-1: %s" % F
+    return F
+    # print "P: %s" % P
+    # print "R: %s" % R
+    # print "F-1: %s" % F
+
+    # print "roung2"
+    # [P, R, F] = evaluate.rounge2(pred = (pred), test = (e.ground_truths) )
+
+    # print "P: %s" % P
+    # print "R: %s" % R
+    # print "F-1: %s" % F
 
 def main():
-  print "main"
-  sampleDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn_stories/sample/'
-  
+  # print "main"
+  # sampleDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn_stories/sample/'
   mylsa = lsa()
-  mylsa.sample()
 
+  # file name
+  sampleDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/cnn_stories/sample/'
+  f = sampleDir + '000c835555db62e319854d9f8912061cdca1893e.story'
+  
+  print f
+    
+  print mylsa.sample(f)
+
+  data_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/cnn_stories/stories/'
+  res_list = []
+  cnt = 0
+  for fname in os.listdir(data_path):
+    
+    path = os.path.join(data_path,fname)
+    res = mylsa.sample(path)
+    print res
+    res_list.append(res)
+    cnt += 1
+    if cnt > 20:
+      break
+  
+  print 'f1: %s' % (sum(res_list) / len(res_list))
 
 if __name__ == "__main__":
   dataDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn_stories/stories/'
