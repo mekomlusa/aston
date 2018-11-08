@@ -1,24 +1,23 @@
-from calc_freq import calc_df, calc_tf
+from codes.extractive.utilities.calc_freq import calc_idf, calc_tf
+from codes.extractive.utilities.constants import MIN_NUM_WORDS_IN_SENT, NUM_SUM_SENTS
 from heapq import heappush, heappop
-import time
-import re
+from nltk.tokenize import sent_tokenize
 import os.path
+import re
+import time
 
 
 NUM_TAGS = 20
-NUM_DOCS = 100000
-MIN_NUM_WORDS_IN_SENT = 5
-NUM_SUM_SENTS = 5
 
 
-def calc_sum(article_path, df_dict):
+def calc_sum(article_path, idf_dict):
     tf_dict = dict()
     calc_tf(article_path, tf_dict)
 
     min_heap = []
     count = 0
     for w in tf_dict:
-        tfidf = 1.0 * NUM_DOCS * tf_dict[w] / df_dict[w]
+        tfidf = tf_dict[w] * idf_dict[w]
         heappush(min_heap, (tfidf, w))
         if count < NUM_TAGS:
             count += 1
@@ -31,25 +30,27 @@ def calc_sum(article_path, df_dict):
     min_sum_heap = []
     count = 0
     with open(article_path, 'r') as article:
-        line = article.readline()
-        while line:
+        for line in article:
             if line.find('@highlight') != -1:
                 break
-            words = re.findall(r'[a-zA-Z]+', line)
-            sent = line
-            line = article.readline()
-            if len(words) < MIN_NUM_WORDS_IN_SENT:
+            line = line.strip()
+            # skip subtitles
+            if len(line) == 0 or line[-1].isalnum():
                 continue
-
-            score = 0
-            for w in words:
-                if w in tag_tfidf_dict:
-                    score += tag_tfidf_dict[w]
-            heappush(min_sum_heap, (score, sent))
-            if count < NUM_SUM_SENTS:
-                count += 1
-            else:
-                heappop(min_sum_heap)
+            cur_sents = sent_tokenize(line)
+            for sent in cur_sents:
+                words = re.findall(r'[a-zA-Z]+', sent)
+                if len(words) < MIN_NUM_WORDS_IN_SENT:
+                    continue
+                score = 0
+                for w in words:
+                    if w in tag_tfidf_dict:
+                        score += tag_tfidf_dict[w]
+                heappush(min_sum_heap, (score, sent))
+                if count < NUM_SUM_SENTS:
+                    count += 1
+                else:
+                    heappop(min_sum_heap)
 
     sum_list = []
     while len(min_sum_heap) > 0:
@@ -61,9 +62,9 @@ def calc_sum(article_path, df_dict):
 
 
 if __name__ == '__main__':
-    global_df_dict = calc_df()
-    dirname = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.abspath(os.path.join(dirname, os.pardir, os.pardir, os.pardir))
+    global_df_dict = calc_idf()
+    dir_name = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.abspath(os.path.join(dir_name, os.pardir, os.pardir, os.pardir))
     stories_dir = os.path.join(root_dir, 'cnn_stories')
     time_s = time.time()
     # process first article

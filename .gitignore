@@ -2,3 +2,4 @@ cnn_stories/
 *.pyc
 *.csv
 venv/
+.idea/workspace.xml
