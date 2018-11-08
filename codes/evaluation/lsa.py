@@ -41,8 +41,8 @@ class lsa:
     for line in sentences:
       e.sentences.append(line)
 
-    for id in range(1,len(parts)):
-      e.ground_truths.append(parts[id])    
+    for idx in range(1,len(parts)):
+      e.ground_truths.append(parts[idx])    
     return e
 
 
@@ -52,15 +52,15 @@ class lsa:
     e = self.readFile(f)
     matrix = {}
     print "number of sentences: %s" % len(e.sentences) 
-    for id in range(len(e.sentences)):
-      matrix[id] = {} 
-      words = re.split('\W+', e.sentences[id])
+    for idx in range(len(e.sentences)):
+      matrix[idx] = {} 
+      words = re.split('\W+', e.sentences[idx])
       for word in words:
         if  len(word) == 0: # skip ""
           continue
-        if word not in matrix[id]:
-          matrix[id][word] = 0
-        matrix[id][word] += 1
+        if word not in matrix[idx]:
+          matrix[idx][word] = 0
+        matrix[idx][word] += 1
     
     # complete svd here
     arr = pd.DataFrame.from_dict(matrix).fillna(0).values
@@ -77,7 +77,7 @@ class lsa:
     s[s < sigma_threshold] = 0  # Set all other singular values to zero
 
     saliency_vec = np.dot(np.square(s), np.square(vh)) # Build a "length vector" containing the length (i.e. saliency) of each sentence
-    top_sentences = saliency_vec.argsort()[: k][::-1]
+    top_sentences = saliency_vec.argsort()[-k:][::-1]
     
     top_sentences.sort() # Return the sentences in the order in which they appear in the document
 
