@@ -5,7 +5,7 @@ from nltk.stem import PorterStemmer, WordNetLemmatizer
 STEMMER = PorterStemmer()
 LEMMATIZER = WordNetLemmatizer()
 
-class evaluator:
+class Evaluator:
 
     def sample(self):
         ground_truth = ["The 15 new cardinals will be installed on February 14", 
@@ -191,5 +191,5 @@ class evaluator:
 
 
 if __name__ == '__main__':
-    test = evaluator()
+    test = Evaluator()
     test.sample()

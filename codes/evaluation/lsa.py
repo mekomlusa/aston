@@ -4,7 +4,7 @@ import numpy as np
 import os
 import sys
 import re
-from Evaluator import evaluator
+from Evaluator import Evaluator
 class Example:
   '''ground truths and words'''
   def __init__(self):
@@ -83,7 +83,7 @@ class lsa:
 
     pred = [e.sentences[i] for i in top_sentences]
     # print pred
-    evaluate = evaluator()
+    evaluate = Evaluator()
     [P, R, F] = evaluate.rounge1(pred = (pred), test = (e.ground_truths) )
 
     return F
