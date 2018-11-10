@@ -15,15 +15,15 @@ class Evaluator:
         predict = ['Pope Francis said Sunday that he would hold a meeting of cardinals on February 14 \"during which I will name 15 new Cardinals who, coming from 13 countries from every continent, manifest the indissoluble links between the Church of Rome and the particular Churches presentin the world,\" according to Vatican Radio.', 
                 'Christopher Bellitto, a professor of church history at Kean University in New Jersey, noted that Francis announced his new slate of cardinals on the Catholic Feast of the Epiphany, which commemorates the visit of the Magi to Jesus\' birthplace in Bethlehem.', 
                 'Beginning in the 1920s, an increasing number of Latin American churchmen were named cardinals, and in the 1960s, St. John XXIII, whom Francis canonized last year, appointed the first cardinals from Japan, the Philippines and Africa.']
-# <<<<<<< chenxichao
+
         print "rounge1 without stemming and lemma"
-        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem=False )
+        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
         print "rounge1 only with stemming"
-        [P, R, F] = self.rounge1(pred = predict, test = ground_truth )
+        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem = True, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
@@ -35,7 +35,7 @@ class Evaluator:
         print "F-1: %s" % F
 
         print "rounge2 without stemming and lemma"
-        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem=False )
+        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
@@ -47,11 +47,12 @@ class Evaluator:
         print "F-1: %s" % F
 
         print "rounge2 only with stemming"
-        [P, R, F] = self.rounge2(pred = predict, test = ground_truth )
+        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem=True, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
-# =======
+
+
         self.print_rouge_1_2(predict, ground_truth)
 
     def print_rouge_1_2(self, pred, test):
@@ -60,7 +61,6 @@ class Evaluator:
         print("P: %s" % p)
         print("R: %s" % r)
         print("F-1: %s" % f)
-# >>>>>>> master
 
         print("rounge2")
         [p, r, f] = self.rounge2(pred=pred, test=test)
@@ -69,7 +69,7 @@ class Evaluator:
         print("R: %s" % r)
         print("F-1: %s" % f)
 
-    def rounge2(self, test, pred, stem = True, lemma = False):
+    def rounge2(self, test, pred, stem = False, lemma = True):
         '''
         @params
         test: human made test sentences list of strings
@@ -79,14 +79,9 @@ class Evaluator:
         @return
         p, r, f
         '''
-# <<<<<<< chenxichao
-
         test_word_pair_dict, cnt_test_pair = self.count_word_pairs(test, stem, lemma)
         pred_word_pair_dict, cnt_pred_pair = self.count_word_pairs(pred, stem, lemma)
-# =======
-#         test_word_pair_dict, cnt_test_pair = self.count_word_pairs(test)
-#         pred_word_pair_dict, cnt_pred_pair = self.count_word_pairs(pred)
-# >>>>>>> master
+
 
         # compare words in test and pred, if words exist in test and both in pred, we record this word, cnt++, cnts for
         # all times the words appears instead of unique words
@@ -145,7 +140,7 @@ class Evaluator:
 
         return [pairs, cnt]
 
-    def rounge1(self, test, pred, stem = True, lemma = False):
+    def rounge1(self, test, pred, stem = False, lemma = True):
         '''
         @params
         test: human made test sentences list of strings
@@ -156,12 +151,7 @@ class Evaluator:
         P, R, F
         '''
         from collections import Counter
-# <<<<<<< chenxichao
 
-#         cnts for all words in test cases and ground truth cases
-# =======
-        # cnts for all words in test cases and ground truth cases
-# >>>>>>> master
         test_words = re.split('\W+', " ".join(test))
         pred_words = re.split('\W+', " ".join(pred))
         # print test_words
@@ -201,7 +191,6 @@ class Evaluator:
 
         return [P, R, F]
 
-# <<<<<<< chenxichao
     def pre_processing(self, wordList, stem):
         '''
         @params:
@@ -222,9 +211,3 @@ class Evaluator:
 if __name__ == '__main__':
     test = Evaluator()
     test.sample()
-# =======
-
-# if __name__ == '__main__':
-#     test_ev = Evaluator()
-#     test_ev.sample()
-# >>>>>>> master
