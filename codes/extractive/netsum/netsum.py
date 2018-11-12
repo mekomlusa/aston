@@ -43,7 +43,7 @@ news_words_path = "/root/nlp_project/cnn/idf.csv"
 MAX_INPUT_SEQ_LENGTH=30
 BATCH_SIZE = 20
 EPOCHS = 20
-STOP_WORDS = None
+STOP_WORDS = []
 WORD_MIN_LEN = 1
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
@@ -179,7 +179,7 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
         if padding_needed:
             for _ in range(len(text_sents),MAX_INPUT_SEQ_LENGTH):
                 label_list.append(0)
-                feature_list.append([0]*7)
+                feature_list.append([0]*8)
         
         label.append(label_list)
         feature.append(feature_list)
@@ -232,6 +232,9 @@ def sentence_similarity(wordSense1, wordSense2):
     '''
     similarity = 0.0
     total = 0.0
+    if len(wordSense1) == 0 or len(wordSense2) == 0:
+        return 0
+    
     for sense1 in wordSense1:
         for sense2 in wordSense2:
             total += 1.0
