@@ -22,6 +22,7 @@ import re
 STOP_WORDS = None
 DAMPING = 0.85
 COS_THRESHOLD = 0.1
+TFIDF_THRESHOLD = 0.0
 EIGEN_VEC_MAX_ERR = 0.05
 STEMMER = PorterStemmer()
 LEMMATIZER = WordNetLemmatizer()
@@ -81,7 +82,7 @@ def idf_modified_cosine(s1, s2, idf_dict, stem_dict, choice):
     return res * 1.0 / math.sqrt(tf_idf_sum1) * math.sqrt(tf_idf_sum2)
 
 
-def sentence_similarity(s1, s2):
+def sentence_similarity(s1, s2, idf_dict, lemma_dict):
     w_count_1 = dict()
     w_count_2 = dict()
 
@@ -89,15 +90,38 @@ def sentence_similarity(s1, s2):
         w = w.lower()
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
             continue
-        w = LEMMATIZER.lemmatize(w, pos='v')
+        if w in lemma_dict:
+            w = lemma_dict[w]
+        else:
+            w_lemma = LEMMATIZER.lemmatize(w, pos='v')
+            lemma_dict[w] = w_lemma
+            w = w_lemma
         w_count_1[w] = w_count_1[w] + 1 if w in w_count_1 else 1
 
     for w in re.findall(r'[a-zA-Z]+', s2):
         w = w.lower()
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
             continue
-        w = LEMMATIZER.lemmatize(w, pos='v')
+        if w in lemma_dict:
+            w = lemma_dict[w]
+        else:
+            w_lemma = LEMMATIZER.lemmatize(w, pos='v')
+            lemma_dict[w] = w_lemma
+            w = w_lemma
         w_count_2[w] = w_count_2[w] + 1 if w in w_count_2 else 1
+
+    # ignore common words
+    for w, c in w_count_1.items():
+        idf = idf_dict[w] if w in idf_dict else 10.0
+        tfidf = c * idf
+        if tfidf < TFIDF_THRESHOLD:
+            w_count_1.pop(w)
+
+    for w, c in w_count_2.items():
+        idf = idf_dict[w] if w in idf_dict else 10.0
+        tfidf = c * idf
+        if tfidf < TFIDF_THRESHOLD:
+            w_count_2.pop(w)
 
     similarity = 0.0
     total = 0.0
@@ -139,7 +163,7 @@ def calc_lex_rank_scores(sents, idf_dict, is_damped=False, choice=0):
     stem_dict = dict()
     for i in range(0, num_sents):
         for j in range(0, num_sents):
-            cos_mat[i][j] = sentence_similarity(sents[i], sents[j]) if USE_SIMILARITY else idf_modified_cosine(sents[i], sents[j], idf_dict, stem_dict, choice)
+            cos_mat[i][j] = sentence_similarity(sents[i], sents[j], idf_dict, stem_dict) if USE_SIMILARITY else idf_modified_cosine(sents[i], sents[j], idf_dict, stem_dict, choice)
             if cos_mat[i][j] > COS_THRESHOLD:
                 cos_mat[i][j] = 1.0
                 deg[i] += 1
@@ -287,16 +311,6 @@ def test_sumy_lexrank_pack_batch(stories_dir_path, num_files):
     print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
     print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
     print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
-
-
-def test_word_similarity():
-    s1 = 'No Americans made the list this time or the previous time in Francis'
-    s2 = 'Pope Francis said Sunday that he would hold a meeting of cardinals on February 14'
-    s3 = 'Beginning in the 1920s, an increasing number of Latin American churchmen were named cardinals, and in the 196' \
-         '0s, St. John XXIII, whom Francis canonized last year, appointed the first cardinals from Japan, the Philippin' \
-         'es and Africa.'
-    print sentence_similarity(s1, s2)
-    print sentence_similarity(s1, s3)
 
 
 if __name__ == '__main__':
