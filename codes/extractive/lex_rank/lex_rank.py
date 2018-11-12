@@ -22,7 +22,7 @@ import re
 STOP_WORDS = None
 DAMPING = 0.85
 COS_THRESHOLD = 0.1
-EIGEN_VEC_MAX_ERR = 0.001
+EIGEN_VEC_MAX_ERR = 0.05
 STEMMER = PorterStemmer()
 LEMMATIZER = WordNetLemmatizer()
 USE_SIMILARITY = True
@@ -32,6 +32,7 @@ def idf_modified_cosine(s1, s2, idf_dict, stem_dict, choice):
     tf_count_dict1 = dict()
     tf_count_dict2 = dict()
     for w in re.findall(r'[a-zA-Z]+', s1):
+        w = w.lower()
         if w in STOP_WORDS:
             continue
         if choice != 0:
@@ -46,12 +47,16 @@ def idf_modified_cosine(s1, s2, idf_dict, stem_dict, choice):
             continue
         tf_count_dict1[w] = tf_count_dict1[w] + 1 if w in tf_count_dict1 else 1
     for w in re.findall(r'[a-zA-Z]+', s2):
+        w = w.lower()
         if w in STOP_WORDS:
             continue
-        if choice == 1:
-            w = STEMMER.stem(w)
-        elif choice == 2:
-            w = LEMMATIZER.lemmatize(w, pos='v')
+        if choice != 0:
+            if w in stem_dict:
+                w = stem_dict[w]
+            else:
+                w_stem = STEMMER.stem(w) if choice == 1 else LEMMATIZER.lemmatize(w, pos='v')
+                stem_dict[w] = w_stem
+                w = w_stem
         if len(w) < WORD_MIN_LEN:
             continue
         tf_count_dict2[w] = tf_count_dict2[w] + 1 if w in tf_count_dict2 else 1
@@ -77,34 +82,39 @@ def idf_modified_cosine(s1, s2, idf_dict, stem_dict, choice):
 
 
 def sentence_similarity(s1, s2):
-    ws1 = []
-    ws2 = []
+    w_count_1 = dict()
+    w_count_2 = dict()
+
     for w in re.findall(r'[a-zA-Z]+', s1):
+        w = w.lower()
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
             continue
-        senses = wn.synsets(w)
-        if len(senses) == 0:
-            continue
-        ws1.append(senses[0])
+        w = LEMMATIZER.lemmatize(w, pos='v')
+        w_count_1[w] = w_count_1[w] + 1 if w in w_count_1 else 1
 
     for w in re.findall(r'[a-zA-Z]+', s2):
+        w = w.lower()
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
             continue
-        senses = wn.synsets(w)
-        if len(senses) == 0:
-            continue
-        ws2.append(senses[0])
+        w = LEMMATIZER.lemmatize(w, pos='v')
+        w_count_2[w] = w_count_2[w] + 1 if w in w_count_2 else 1
 
     similarity = 0.0
     total = 0.0
-    for sense1 in ws1:
-        for sense2 in ws2:
-            total += 1.0
-            cur_sim = wn.path_similarity(sense1, sense2)
+    for w1, c1 in w_count_1.items():
+        s1s = wn.synsets(w1)
+        if len(s1s) == 0:
+            continue
+        for w2, c2 in w_count_2.items():
+            s2s = wn.synsets(w2)
+            if len(s2s) == 0:
+                continue
+            total += c1 * c2
+            cur_sim = wn.path_similarity(s1s[0], s2s[0])
             if cur_sim:
-                similarity += cur_sim
+                similarity += c1 * c2 * cur_sim
 
-    return similarity / total
+    return similarity / total if total > 0.0 else 0.0
 
 
 def power_method(cos_mat, num_sents, err):
@@ -129,7 +139,7 @@ def calc_lex_rank_scores(sents, idf_dict, is_damped=False, choice=0):
     stem_dict = dict()
     for i in range(0, num_sents):
         for j in range(0, num_sents):
-            cos_mat[i][j] = sentence_similarity(sents[i], sents[j]) if USE_SIMILARITY else (sents[i], sents[j], idf_dict, stem_dict, choice)
+            cos_mat[i][j] = sentence_similarity(sents[i], sents[j]) if USE_SIMILARITY else idf_modified_cosine(sents[i], sents[j], idf_dict, stem_dict, choice)
             if cos_mat[i][j] > COS_THRESHOLD:
                 cos_mat[i][j] = 1.0
                 deg[i] += 1
@@ -299,10 +309,10 @@ if __name__ == '__main__':
     root_dir = os.path.abspath(os.path.join(dir_name, os.pardir, os.pardir, os.pardir))
     stories_dir = os.path.join(root_dir, 'cnn_stories')
 
-    num_test_files = 5
+    num_test_files = 50
     # print('original')
     # test_evaluation_batch(stories_dir, num_test_files, idf_dict_original)
-    print('\ndamped')
+    print('\ndamped, lemma')
     test_evaluation_batch(stories_dir, num_test_files, idf_dict_original, is_damped=True)
     print('\nsumy lexrank')
     test_sumy_lexrank_pack_batch(stories_dir, num_test_files)
