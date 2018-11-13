@@ -35,7 +35,7 @@ import csv
 # The preprocessed step is taken care of by sampleGenerator.py under utilities
 text_path = "/root/nlp_project/cnn/text_samples/"
 summary_path = "/root/nlp_project/cnn/summary_samples/"
-file_list = "/root/nlp_project/cnn/datalist_20K.csv"
+file_list = "/root/nlp_project/cnn/datalist.csv"
 news_words_path = "/root/nlp_project/cnn/idf.csv"
 
 # Parameter settings
@@ -368,7 +368,7 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
     global_r2 = 0.0
     global_f2 = 0.0
     
-    for i in len(num_files):
+    for i in range(num_files):
         [p1, r1, f1] = ev.rounge1(all_pred_summary[i], all_actual_summary[i])
         [p2, r2, f2] = ev.rounge2(all_pred_summary[i], all_actual_summary[i])
         global_p1 += p1
