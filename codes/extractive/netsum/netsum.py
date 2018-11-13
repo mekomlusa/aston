@@ -17,6 +17,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 import pandas as pd
 import numpy as np
 from collections import Counter
+import argparse
 import os
 import re
 import keras
@@ -29,15 +30,6 @@ from codes.evaluation.Evaluator import Evaluator
 from nltk.corpus import wordnet as wn
 import csv
 
-# TODO: take path information at runtime
-# Change the paths below based on your cases. There should be a folder saving cleaned news body, a folder saving cleaned summary body,
-# and a file list which saves the mapping before the processed files.
-# The preprocessed step is taken care of by sampleGenerator.py under utilities
-text_path = "/root/nlp_project/cnn/text_samples/"
-summary_path = "/root/nlp_project/cnn/summary_samples/"
-file_list = "/root/nlp_project/cnn/datalist.csv"
-news_words_path = "/root/nlp_project/cnn/idf.csv"
-
 # Parameter settings
 # min. input size: 30 (sentences)
 MAX_INPUT_SEQ_LENGTH=30
@@ -45,6 +37,7 @@ BATCH_SIZE = 20
 EPOCHS = 20
 STOP_WORDS = []
 WORD_MIN_LEN = 1
+IS_LEMMATIZE = False
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
@@ -389,7 +382,28 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
     
 # main method
 if __name__ == "__main__":
-    is_lemmatize = False
+    
+    # Take path information at runtime
+    parser = argparse.ArgumentParser(
+        description='DeepMind CNN News - NetSum algorithm')
+    parser.add_argument('-t','--text', required=True,
+                        metavar="/path/to/dataset/",
+                        help='Path to the extracted text directory')
+    parser.add_argument('-s','--summary', required=True,
+                        metavar="/path/to/dataset/",
+                        help='Path to the extracted summary directory')
+    parser.add_argument('-m','--mirror', required=True,
+                        metavar="/path/to/datalist_file/",
+                        help='Path to the matching data list file (text - summary mirroring)')
+    parser.add_argument('-i','--idf', required=False,
+                        metavar="/path/to/idf_file/",
+                        help='Path to the IDF file')
+    args = parser.parse_args()
+    text_path = args.text
+    summary_path = args.summary
+    file_list = args.mirror
+    news_words_path = args.idf if args.idf else "/root/nlp_project/cnn/idf.csv"
+    
     choice = input("Training or inference? (0 for training, 1 for inference) ")
     while choice != '1' and choice != '0':
         choice = input("Training or inference? (0 for training, 1 for inference) ")
@@ -410,9 +424,9 @@ if __name__ == "__main__":
                 saved_tranformed_data = input("Do you want to save transformed data? (Y/N)")
             if saved_tranformed_data.lower() == 'y':
                 transformed_path = input("Please specify the path where you'd like to save your transformed data to:")
-                X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, True, transformed_path)
+                X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, True, transformed_path)
             else:
-                X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
+                X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, False)
         # splitting the data into training & testing set
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
         print("Size of the training set:",X_train.shape)
@@ -425,7 +439,7 @@ if __name__ == "__main__":
         all_actual_summary = []
         print("Making predictions.")
         file_list = input("Please specify the testing file list: ")
-        X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
+        X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, False)
         pretrained_weights = input("Where is the saved model weights?")
         predictions = inference(X, pretrained_weights)
         data_df = pd.read_csv(file_list,sep=',',header='infer')
@@ -455,4 +469,4 @@ if __name__ == "__main__":
             all_actual_summary.append(sent_tokenize(text))
             
         # Rogue 1 and 2 evaluations
-        test_evaluation_batch(5, all_predicted_summary, all_actual_summary)
+        test_evaluation_batch(50, all_predicted_summary, all_actual_summary)
