@@ -438,7 +438,6 @@ if __name__ == "__main__":
         all_predicted_summary = []
         all_actual_summary = []
         print("Making predictions.")
-        file_list = input("Please specify the testing file list: ")
         X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, False)
         pretrained_weights = input("Where is the saved model weights?")
         predictions = inference(X, pretrained_weights)
