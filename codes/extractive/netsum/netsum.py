@@ -400,7 +400,11 @@ if __name__ == "__main__":
                         help='Path to the IDF file')
     args = parser.parse_args()
     text_path = args.text
+    if text_path[-1] != '/':
+        text_path += '/'
     summary_path = args.summary
+    if summary_path[-1] != '/':
+        summary_path += '/'
     file_list = args.mirror
     news_words_path = args.idf if args.idf else "/root/nlp_project/cnn/idf.csv"
     
