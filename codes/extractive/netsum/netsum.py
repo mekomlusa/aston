@@ -8,8 +8,8 @@ Python 3.5, tested and passed.
 
 Usage: activate a Python 3.5 environment. Run `python netsum.py`.
 """
-# configuring for the code evaluation part
-import sys
+#from __future__ import division
+import sys	
 sys.path.append('../../../')
 
 import nltk
@@ -17,7 +17,9 @@ from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 import pandas as pd
 import numpy as np
 from collections import Counter
+import argparse
 import os
+import re
 import keras
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential, Model
@@ -25,22 +27,17 @@ from keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from nltk.stem import WordNetLemmatizer
 from codes.evaluation.Evaluator import Evaluator
+from nltk.corpus import wordnet as wn
 import csv
-
-# TODO: take path information at runtime
-# Change the paths below based on your cases. There should be a folder saving cleaned news body, a folder saving cleaned summary body,
-# and a file list which saves the mapping before the processed files.
-# The preprocessed step is taken care of by sampleGenerator.py under utilities
-text_path = "/root/nlp_project/cnn/text_samples/"
-summary_path = "/root/nlp_project/cnn/summary_samples/"
-file_list = "/root/nlp_project/cnn/datalist_20K.csv"
-news_words_path = "/root/nlp_project/cnn/idf.csv"
 
 # Parameter settings
 # min. input size: 30 (sentences)
 MAX_INPUT_SEQ_LENGTH=30
 BATCH_SIZE = 20
 EPOCHS = 20
+STOP_WORDS = []
+WORD_MIN_LEN = 1
+IS_LEMMATIZE = False
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
@@ -95,6 +92,10 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
         summary_file = os.path.join(summary_path,data_df["summary_path"][i])
         with open(summary_file, 'r', encoding="utf8") as rf:
             text = rf.read()
+            summary_sents = sent_tokenize(text)
+            summary_senses = []
+            for sent in summary_sents:
+                summary_senses.append(get_sent_word_sens(sent))
             summary_array = word_tokenizer.tokenize(text)
             summary_array_cleaned = []
             if is_lemmatize:
@@ -122,17 +123,19 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
             both_occur = 0
             cum_prob_word = 0
             cum_prob_bigram = 0
+            wordnet_sent_sim_score = 0
             word_array = word_tokenizer.tokenize(text_sents[j])
             is_first_sentence = 0
             if j == 0:
                 is_first_sentence = 1
             sent_position = j / len(text_sents)
-            # get the rouge1 score here and append to the vector.
-            label_list.append(both_occur/len(summary_array_cleaned))
             if len(word_array) == 0:
                 # for sentence like "...", there is no way to calculate sum basic related scores. So just skip them.
-                feature_list.append([is_first_sentence, sent_position, 0,0,0,0,0])
+                feature_list.append([is_first_sentence, sent_position, 0,0,0,0,0,0])
+                # similarly, the label will be 0 (since there will be no common word)
+                label_list.append(0)
                 continue
+            
             sum_idf = 0
             word_array_clean = []
             for w in word_array:
@@ -159,13 +162,17 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
                 sum_bigram_score = 0
             # TODO: add more features here
             sent_sim_to_summ = (both_occur/len(summary_array_cleaned)) / len(set(word_array_clean))
-            feature_list.append([is_first_sentence, sent_position, sum_basic_score, sum_bigram_score, sent_sim_to_summ, sum_idf, avg_idf])
+            this_sent_sense = get_sent_word_sens(text_sents[j])
+            for ss in summary_senses:
+                wordnet_sent_sim_score += sentence_similarity(ss,this_sent_sense)
+            feature_list.append([is_first_sentence, sent_position, sum_basic_score, sum_bigram_score, sent_sim_to_summ, sum_idf, avg_idf, wordnet_sent_sim_score])
+            label_list.append(both_occur/len(summary_array_cleaned))
         
         # for padding (manual)
         if padding_needed:
             for _ in range(len(text_sents),MAX_INPUT_SEQ_LENGTH):
                 label_list.append(0)
-                feature_list.append([0]*7)
+                feature_list.append([0]*8)
         
         label.append(label_list)
         feature.append(feature_list)
@@ -184,6 +191,51 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
             print("Transformed data has been saved under",os.getcwd())
             
     return X, Y
+
+def get_sent_word_sens(sentence):
+    '''
+    Get senses for each valid word in a sentence.
+    
+    Parameter:
+        sentence (str): a string containing a collection of words.
+        
+    Return:
+        wordSense (list): a list of extracted sense (default to be the first one)
+    '''
+    wordSense = []
+    for w in re.findall(r'[a-zA-Z]+', sentence):
+        if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
+            continue
+        senses = wn.synsets(w)
+        if len(senses) == 0:
+            continue
+        wordSense.append(senses[0])
+    return wordSense
+
+def sentence_similarity(wordSense1, wordSense2):
+    '''
+    Calculating sentence similarity measurement.
+    
+    Parameters:
+        wordSense1 (list): a list of extracted sense for the first sentence.
+        wordSense2 (list): a list of extracted sense for the second sentence.
+        
+    Return:
+        the similarity score (float).
+    '''
+    similarity = 0.0
+    total = 0.0
+    if len(wordSense1) == 0 or len(wordSense2) == 0:
+        return 0
+    
+    for sense1 in wordSense1:
+        for sense2 in wordSense2:
+            total += 1.0
+            cur_sim = wn.path_similarity(sense1, sense2)
+            if cur_sim:
+                similarity += cur_sim
+
+    return similarity / total
 
 def save_transformed_data(X, Y, saved_path):
     '''
@@ -330,7 +382,28 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
     
 # main method
 if __name__ == "__main__":
-    is_lemmatize = False
+    
+    # Take path information at runtime
+    parser = argparse.ArgumentParser(
+        description='DeepMind CNN News - NetSum algorithm')
+    parser.add_argument('-t','--text', required=True,
+                        metavar="/path/to/dataset/",
+                        help='Path to the extracted text directory')
+    parser.add_argument('-s','--summary', required=True,
+                        metavar="/path/to/dataset/",
+                        help='Path to the extracted summary directory')
+    parser.add_argument('-m','--mirror', required=True,
+                        metavar="/path/to/datalist_file/",
+                        help='Path to the matching data list file (text - summary mirroring)')
+    parser.add_argument('-i','--idf', required=False,
+                        metavar="/path/to/idf_file/",
+                        help='Path to the IDF file')
+    args = parser.parse_args()
+    text_path = args.text
+    summary_path = args.summary
+    file_list = args.mirror
+    news_words_path = args.idf if args.idf else "/root/nlp_project/cnn/idf.csv"
+    
     choice = input("Training or inference? (0 for training, 1 for inference) ")
     while choice != '1' and choice != '0':
         choice = input("Training or inference? (0 for training, 1 for inference) ")
@@ -351,9 +424,9 @@ if __name__ == "__main__":
                 saved_tranformed_data = input("Do you want to save transformed data? (Y/N)")
             if saved_tranformed_data.lower() == 'y':
                 transformed_path = input("Please specify the path where you'd like to save your transformed data to:")
-                X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, True, transformed_path)
+                X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, True, transformed_path)
             else:
-                X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
+                X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, False)
         # splitting the data into training & testing set
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
         print("Size of the training set:",X_train.shape)
@@ -365,8 +438,7 @@ if __name__ == "__main__":
         all_predicted_summary = []
         all_actual_summary = []
         print("Making predictions.")
-        file_list = input("Please specify the testing file list: ")
-        X, Y = data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_list, False)
+        X, Y = data_prep(text_path, summary_path, news_words_path, IS_LEMMATIZE, file_list, False)
         pretrained_weights = input("Where is the saved model weights?")
         predictions = inference(X, pretrained_weights)
         data_df = pd.read_csv(file_list,sep=',',header='infer')
@@ -396,4 +468,4 @@ if __name__ == "__main__":
             all_actual_summary.append(sent_tokenize(text))
             
         # Rogue 1 and 2 evaluations
-        test_evaluation_batch(len(data_df), all_predicted_summary, all_actual_summary)
+        test_evaluation_batch(50, all_predicted_summary, all_actual_summary)

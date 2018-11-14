@@ -20,7 +20,7 @@ import os
 import pandas as pd
 import datetime
 
-def sampleGenerator(src_summary, src_text, summary_output, text_output, num_of_samples):
+def sampleGenerator(src_summary, src_text, summary_output, text_output, num_of_samples, dict_to_exclude = None):
     summaries = os.listdir('%s' % src_summary)
     texts = os.listdir('%s' % src_text)
     res_list = pd.DataFrame(columns=['text_path','summary_path'])
@@ -39,10 +39,16 @@ def sampleGenerator(src_summary, src_text, summary_output, text_output, num_of_s
             selected = random.randint(0,smaller-1)
         summary_to_copy = summaries[selected]
         text_to_copy = summaries[selected].split("summary")[0]+'text.txt'
-        while text_to_copy not in texts:
-            selected = random.randint(0,smaller-1)
-            summary_to_copy = summaries[selected]
-            text_to_copy = summaries[selected].split("summary")[0]+'.text.txt'
+        if dict_to_exclude:
+            while text_to_copy not in texts and not dict_to_exclude.get(summary_to_copy):
+                selected = random.randint(0,smaller-1)
+                summary_to_copy = summaries[selected]
+                text_to_copy = summaries[selected].split("summary")[0]+'.text.txt'
+        else:
+            while text_to_copy not in texts:
+                selected = random.randint(0,smaller-1)
+                summary_to_copy = summaries[selected]
+                text_to_copy = summaries[selected].split("summary")[0]+'.text.txt'
         shutil.copy2(src_summary+summary_to_copy, summary_output)
         shutil.copy2(src_text+text_to_copy, text_output)
         res_list.loc[x] = [text_to_copy,summary_to_copy]
@@ -81,8 +87,17 @@ if __name__ == "__main__":
     parser.add_argument('-n','--num', required=True,
                         metavar="100",
                         help='Number of samples desired')
+    parser.add_argument('-dl','--datalist', required=False,
+                        metavar="/path/to/datalist_file/",
+                        help='Path to existing data list file (prevent getting same samples)')
     args = parser.parse_args()
     
     print("Copying files.")
-    sampleGenerator(args.sumsrc, args.textsrc, args.sumdes, args.textdes, int(args.num))
+    if args.datalist:
+        data_to_exclude = pd.read_csv(args.datalist)
+        tmp_dict = data_to_exclude['summary_path'].to_dict()
+        checking_dict = dict((y.split('.')[0],x) for x,y in tmp_dict.items())
+        sampleGenerator(args.sumsrc, args.textsrc, args.sumdes, args.textdes, int(args.num), checking_dict)
+    else:
+        sampleGenerator(args.sumsrc, args.textsrc, args.sumdes, args.textdes, int(args.num))
     print("A random shuffled sample summaries could be found under",args.sumdes,"; sample texts are saved under",args.textdes)
