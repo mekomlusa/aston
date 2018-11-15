@@ -38,6 +38,9 @@ EPOCHS = 20
 STOP_WORDS = []
 WORD_MIN_LEN = 1
 IS_LEMMATIZE = False
+IDF_THRESHOLD = 10
+
+news_words = {}
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
@@ -61,7 +64,7 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
     lemmatizer = WordNetLemmatizer()
     # Read the news word corpus.
     reader = csv.reader(open(news_words_path, 'r'))
-    news_words = {}
+    
     for row in reader:
        k, v = row
        news_words[k] = float(v)
@@ -192,12 +195,13 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
             
     return X, Y
 
-def get_sent_word_sens(sentence):
+def get_sent_word_sens(sentence, with_idf_focus = False):
     '''
     Get senses for each valid word in a sentence.
     
     Parameter:
         sentence (str): a string containing a collection of words.
+        with_idf_focus (bool): a boolean indicating whether to filter out words based on its IDF score.
         
     Return:
         wordSense (list): a list of extracted sense (default to be the first one)
@@ -205,6 +209,9 @@ def get_sent_word_sens(sentence):
     wordSense = []
     for w in re.findall(r'[a-zA-Z]+', sentence):
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
+            continue
+        # skip words that are deemed to be unimportant by the IDF score.
+        if with_idf_focus and news_words.get(w) < IDF_THRESHOLD:
             continue
         senses = wn.synsets(w)
         if len(senses) == 0:
