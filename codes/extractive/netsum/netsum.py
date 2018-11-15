@@ -41,6 +41,8 @@ IS_LEMMATIZE = False
 IDF_THRESHOLD = 10
 
 news_words = {}
+w_count_1 = {}
+w_count_2 = {}
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
@@ -49,6 +51,8 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
     Parameters:
         text_path (str): path to the preprocessed news text folder.
         summary_path (str): path to the preprocessed summary text folder.
+        news_words_path (str): path to the saved idf file.
+        is_lemmatize (bool): whether to perform lemmatization on words or not.
         file_info (str): path to the mapping file.
         save_transformed_flag (bool): whether to save the transformed features and labels into .npy files. Coupled with transformed_path.
         transformed_path (str): path to save the transformed features and labels. Cannot be None if save_transformed_flag == True.
@@ -58,7 +62,7 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
         Y (numpy.ndarray): transformed labels.
     '''
     label = []
-    feature= []
+    feature = []
     data_df = pd.read_csv(file_list,sep=',',header='infer')
     word_tokenizer = RegexpTokenizer(r'\w+')
     lemmatizer = WordNetLemmatizer()
@@ -118,10 +122,11 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
            
         #print(text_file)
         # Calculating rouge1 label, as described in the paper.
-        # Currently 7 features:
+        # Currently 8 features:
         # is_first_sentence: whether this is the first sentence or not. sent_position: sentence position within the text. sum_basic_score:
         # sum basic score (unigram). sum_bigram_score: sum basic score (bigrams). sent_sim_to_summ: score that measures the similarity between
         # the sentence and the summary. sum_idf: sum of the idf score for this sentence. avg_idf: average of the idf score for this sentence.
+        # wordnet_sent_sim_score: similarity calculated using the nltk wordnet package.
         for j in range(len(text_sents)):
             both_occur = 0
             cum_prob_word = 0
@@ -217,15 +222,18 @@ def get_sent_word_sens(sentence, with_idf_focus = False):
         if len(senses) == 0:
             continue
         wordSense.append(senses[0])
+            
     return wordSense
 
-def sentence_similarity(wordSense1, wordSense2):
+def sentence_similarity(wordSense1, wordSense2, similarity_metric = 'path'):
     '''
     Calculating sentence similarity measurement.
     
     Parameters:
         wordSense1 (list): a list of extracted sense for the first sentence.
         wordSense2 (list): a list of extracted sense for the second sentence.
+        similarity_metric (str): which algorithm for similarity measurement. Default to be the path similaity. Available choice include 
+            Wu-Palmer Similarity (lcs), Resnik Similarity (resnik), and Lin Similarity (lin). See the official definition here: http://www.nltk.org/howto/wordnet.html
         
     Return:
         the similarity score (float).
@@ -238,7 +246,16 @@ def sentence_similarity(wordSense1, wordSense2):
     for sense1 in wordSense1:
         for sense2 in wordSense2:
             total += 1.0
-            cur_sim = wn.path_similarity(sense1, sense2)
+            if similarity_metric == 'path':
+                cur_sim = wn.path_similarity(sense1, sense2)
+            elif similarity_metric == 'lcs':
+                cur_sim = wn.wup_similarity(sense1, sense2)
+            elif similarity_metric == 'resnik':
+                cur_sim = wn.res_similarity(sense1, sense2)
+            elif similarity_metric == 'lin':
+                cur_sim = wn.lin_similarity(sense1, sense2)
+            else:
+                raise ValueError('ERROR: given similarity metric is not defined.')
             if cur_sim:
                 similarity += cur_sim
 
@@ -379,18 +396,19 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
         global_f2 += f2
 
     print('Rouge 1 results')
-    print('Avg. P of {0} samples in rounge 1: {1}'.format(num_files, global_p1 / num_files))
-    print('Avg. R of {0} samples in rounge 1: {1}'.format(num_files, global_r1 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 1: {1}'.format(num_files, global_f1 / num_files))
+    print('Avg. P of {0} samples in rouge 1: {1}'.format(num_files, global_p1 / num_files))
+    print('Avg. R of {0} samples in rouge 1: {1}'.format(num_files, global_r1 / num_files))
+    print('Avg. F-1 of {0} samples in rouge 1: {1}'.format(num_files, global_f1 / num_files))
     print('Rouge 2 results')
-    print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
-    print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
+    print('Avg. P of {0} samples in rouge 2: {1}'.format(num_files, global_p2 / num_files))
+    print('Avg. R of {0} samples in rouge 2: {1}'.format(num_files, global_r2 / num_files))
+    print('Avg. F-1 of {0} samples in rouge 2: {1}'.format(num_files, global_f2 / num_files))
     
 # main method
 if __name__ == "__main__":
     
     # Take path information at runtime
+    # TODO: take argument for training/inference mode
     parser = argparse.ArgumentParser(
         description='DeepMind CNN News - NetSum algorithm')
     parser.add_argument('-t','--text', required=True,
