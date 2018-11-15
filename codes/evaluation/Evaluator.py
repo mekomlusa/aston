@@ -1,5 +1,11 @@
 import re
+"""
+a class for evaluation functions ROUNGE1, ROUNGE2.
 
+@author: Xichao Chen
+
+python version: 2.7
+"""
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 
 STEMMER = PorterStemmer()
@@ -8,6 +14,14 @@ LEMMATIZER = WordNetLemmatizer()
 class Evaluator:
 
     def sample(self):
+        '''
+        test function for rounge1 and rounge2 function
+        params:
+        none
+
+        return:
+        non        
+        '''
         ground_truth = ["The 15 new cardinals will be installed on February 14", 
                         "They come from countries such as Myanmar and Tonga",
                         "No Americans made the list this time or the previous time in Francis' papacy"]
@@ -18,7 +32,7 @@ class Evaluator:
 
         print "rounge1 without stemming and lemma"
         [P, R, F] = self.rounge1(pred = predict, test = ground_truth, lemma=False )
-        print "P: %s" % P
+        print("P: %s" % P)
         print "R: %s" % R
         print "F-1: %s" % F
 
