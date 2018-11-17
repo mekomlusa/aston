@@ -13,6 +13,7 @@ import sys
 sys.path.append('../../../')
 
 import nltk
+from nltk.corpus import wordnet_ic
 from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 import pandas as pd
 import numpy as np
@@ -41,8 +42,7 @@ IS_LEMMATIZE = False
 IDF_THRESHOLD = 10
 
 news_words = {}
-w_count_1 = {}
-w_count_2 = {}
+brown_ic = wordnet_ic.ic('ic-brown.dat')
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
@@ -102,7 +102,7 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
             summary_sents = sent_tokenize(text)
             summary_senses = []
             for sent in summary_sents:
-                summary_senses.append(get_sent_word_sens(sent))
+                summary_senses.append(get_sent_word_sens(sent, with_idf_focus = True))
             summary_array = word_tokenizer.tokenize(text)
             summary_array_cleaned = []
             if is_lemmatize:
@@ -170,9 +170,9 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
                 sum_bigram_score = 0
             # TODO: add more features here
             sent_sim_to_summ = (both_occur/len(summary_array_cleaned)) / len(set(word_array_clean))
-            this_sent_sense = get_sent_word_sens(text_sents[j])
+            this_sent_sense = get_sent_word_sens(text_sents[j], with_idf_focus = True)
             for ss in summary_senses:
-                wordnet_sent_sim_score += sentence_similarity(ss,this_sent_sense)
+                wordnet_sent_sim_score += sentence_similarity(ss,this_sent_sense, similarity_metric = 'lcs')
             feature_list.append([is_first_sentence, sent_position, sum_basic_score, sum_bigram_score, sent_sim_to_summ, sum_idf, avg_idf, wordnet_sent_sim_score])
             label_list.append(both_occur/len(summary_array_cleaned))
         
@@ -216,7 +216,7 @@ def get_sent_word_sens(sentence, with_idf_focus = False):
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
             continue
         # skip words that are deemed to be unimportant by the IDF score.
-        if with_idf_focus and news_words.get(w) < IDF_THRESHOLD:
+        if with_idf_focus and news_words.get(w) and news_words.get(w) < IDF_THRESHOLD:
             continue
         senses = wn.synsets(w)
         if len(senses) == 0:
@@ -233,7 +233,7 @@ def sentence_similarity(wordSense1, wordSense2, similarity_metric = 'path'):
         wordSense1 (list): a list of extracted sense for the first sentence.
         wordSense2 (list): a list of extracted sense for the second sentence.
         similarity_metric (str): which algorithm for similarity measurement. Default to be the path similaity. Available choice include 
-            Wu-Palmer Similarity (lcs), Resnik Similarity (resnik), and Lin Similarity (lin). See the official definition here: http://www.nltk.org/howto/wordnet.html
+            path similarity (path), and Wu-Palmer Similarity (lcs). See the official definition here: http://www.nltk.org/howto/wordnet.html
         
     Return:
         the similarity score (float).
@@ -246,14 +246,11 @@ def sentence_similarity(wordSense1, wordSense2, similarity_metric = 'path'):
     for sense1 in wordSense1:
         for sense2 in wordSense2:
             total += 1.0
+            cur_sim = None
             if similarity_metric == 'path':
                 cur_sim = wn.path_similarity(sense1, sense2)
             elif similarity_metric == 'lcs':
                 cur_sim = wn.wup_similarity(sense1, sense2)
-            elif similarity_metric == 'resnik':
-                cur_sim = wn.res_similarity(sense1, sense2)
-            elif similarity_metric == 'lin':
-                cur_sim = wn.lin_similarity(sense1, sense2)
             else:
                 raise ValueError('ERROR: given similarity metric is not defined.')
             if cur_sim:
@@ -444,8 +441,8 @@ if __name__ == "__main__":
             has_transformed_data = input("Have you saved transformed data before? (Y/N)")
         if has_transformed_data.lower() == 'y':
             saved_path = input("Please provide the path where the transformed X and Y are:")
-            X_path = os.path.join(saved_path,'features.h5')
-            Y_path = os.path.join(saved_path,'labels.h5')
+            X_path = os.path.join(saved_path,'features.npy')
+            Y_path = os.path.join(saved_path,'label.npy')
             X, Y = load_transformed_data(X_path, Y_path)
         else:
             saved_tranformed_data = input("Do you want to save transformed data? (Y/N)")
