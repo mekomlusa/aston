@@ -13,6 +13,7 @@ import sys
 sys.path.append('../../../')
 
 import nltk
+from nltk.corpus import wordnet_ic
 from nltk.tokenize import sent_tokenize, word_tokenize, RegexpTokenizer
 import pandas as pd
 import numpy as np
@@ -38,6 +39,10 @@ EPOCHS = 20
 STOP_WORDS = []
 WORD_MIN_LEN = 1
 IS_LEMMATIZE = False
+IDF_THRESHOLD = 10
+
+news_words = {}
+brown_ic = wordnet_ic.ic('ic-brown.dat')
 
 def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info, save_transformed_flag, transformed_path=None):
     '''
@@ -46,6 +51,8 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
     Parameters:
         text_path (str): path to the preprocessed news text folder.
         summary_path (str): path to the preprocessed summary text folder.
+        news_words_path (str): path to the saved idf file.
+        is_lemmatize (bool): whether to perform lemmatization on words or not.
         file_info (str): path to the mapping file.
         save_transformed_flag (bool): whether to save the transformed features and labels into .npy files. Coupled with transformed_path.
         transformed_path (str): path to save the transformed features and labels. Cannot be None if save_transformed_flag == True.
@@ -55,13 +62,13 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
         Y (numpy.ndarray): transformed labels.
     '''
     label = []
-    feature= []
+    feature = []
     data_df = pd.read_csv(file_list,sep=',',header='infer')
     word_tokenizer = RegexpTokenizer(r'\w+')
     lemmatizer = WordNetLemmatizer()
     # Read the news word corpus.
     reader = csv.reader(open(news_words_path, 'r'))
-    news_words = {}
+    
     for row in reader:
        k, v = row
        news_words[k] = float(v)
@@ -95,7 +102,7 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
             summary_sents = sent_tokenize(text)
             summary_senses = []
             for sent in summary_sents:
-                summary_senses.append(get_sent_word_sens(sent))
+                summary_senses.append(get_sent_word_sens(sent, with_idf_focus = True))
             summary_array = word_tokenizer.tokenize(text)
             summary_array_cleaned = []
             if is_lemmatize:
@@ -115,10 +122,11 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
            
         #print(text_file)
         # Calculating rouge1 label, as described in the paper.
-        # Currently 7 features:
+        # Currently 8 features:
         # is_first_sentence: whether this is the first sentence or not. sent_position: sentence position within the text. sum_basic_score:
         # sum basic score (unigram). sum_bigram_score: sum basic score (bigrams). sent_sim_to_summ: score that measures the similarity between
         # the sentence and the summary. sum_idf: sum of the idf score for this sentence. avg_idf: average of the idf score for this sentence.
+        # wordnet_sent_sim_score: similarity calculated using the nltk wordnet package.
         for j in range(len(text_sents)):
             both_occur = 0
             cum_prob_word = 0
@@ -162,9 +170,9 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
                 sum_bigram_score = 0
             # TODO: add more features here
             sent_sim_to_summ = (both_occur/len(summary_array_cleaned)) / len(set(word_array_clean))
-            this_sent_sense = get_sent_word_sens(text_sents[j])
+            this_sent_sense = get_sent_word_sens(text_sents[j], with_idf_focus = True)
             for ss in summary_senses:
-                wordnet_sent_sim_score += sentence_similarity(ss,this_sent_sense)
+                wordnet_sent_sim_score += sentence_similarity(ss,this_sent_sense, similarity_metric = 'lcs')
             feature_list.append([is_first_sentence, sent_position, sum_basic_score, sum_bigram_score, sent_sim_to_summ, sum_idf, avg_idf, wordnet_sent_sim_score])
             label_list.append(both_occur/len(summary_array_cleaned))
         
@@ -192,12 +200,13 @@ def data_prep(text_path, summary_path, news_words_path, is_lemmatize, file_info,
             
     return X, Y
 
-def get_sent_word_sens(sentence):
+def get_sent_word_sens(sentence, with_idf_focus = False):
     '''
     Get senses for each valid word in a sentence.
     
     Parameter:
         sentence (str): a string containing a collection of words.
+        with_idf_focus (bool): a boolean indicating whether to filter out words based on its IDF score.
         
     Return:
         wordSense (list): a list of extracted sense (default to be the first one)
@@ -206,19 +215,25 @@ def get_sent_word_sens(sentence):
     for w in re.findall(r'[a-zA-Z]+', sentence):
         if w in STOP_WORDS or len(w) < WORD_MIN_LEN:
             continue
+        # skip words that are deemed to be unimportant by the IDF score.
+        if with_idf_focus and news_words.get(w) and news_words.get(w) < IDF_THRESHOLD:
+            continue
         senses = wn.synsets(w)
         if len(senses) == 0:
             continue
         wordSense.append(senses[0])
+            
     return wordSense
 
-def sentence_similarity(wordSense1, wordSense2):
+def sentence_similarity(wordSense1, wordSense2, similarity_metric = 'path'):
     '''
     Calculating sentence similarity measurement.
     
     Parameters:
         wordSense1 (list): a list of extracted sense for the first sentence.
         wordSense2 (list): a list of extracted sense for the second sentence.
+        similarity_metric (str): which algorithm for similarity measurement. Default to be the path similaity. Available choice include 
+            path similarity (path), and Wu-Palmer Similarity (lcs). See the official definition here: http://www.nltk.org/howto/wordnet.html
         
     Return:
         the similarity score (float).
@@ -231,7 +246,13 @@ def sentence_similarity(wordSense1, wordSense2):
     for sense1 in wordSense1:
         for sense2 in wordSense2:
             total += 1.0
-            cur_sim = wn.path_similarity(sense1, sense2)
+            cur_sim = None
+            if similarity_metric == 'path':
+                cur_sim = wn.path_similarity(sense1, sense2)
+            elif similarity_metric == 'lcs':
+                cur_sim = wn.wup_similarity(sense1, sense2)
+            else:
+                raise ValueError('ERROR: given similarity metric is not defined.')
             if cur_sim:
                 similarity += cur_sim
 
@@ -372,18 +393,19 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
         global_f2 += f2
 
     print('Rouge 1 results')
-    print('Avg. P of {0} samples in rounge 1: {1}'.format(num_files, global_p1 / num_files))
-    print('Avg. R of {0} samples in rounge 1: {1}'.format(num_files, global_r1 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 1: {1}'.format(num_files, global_f1 / num_files))
+    print('Avg. P of {0} samples in rouge 1: {1}'.format(num_files, global_p1 / num_files))
+    print('Avg. R of {0} samples in rouge 1: {1}'.format(num_files, global_r1 / num_files))
+    print('Avg. F-1 of {0} samples in rouge 1: {1}'.format(num_files, global_f1 / num_files))
     print('Rouge 2 results')
-    print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
-    print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
+    print('Avg. P of {0} samples in rouge 2: {1}'.format(num_files, global_p2 / num_files))
+    print('Avg. R of {0} samples in rouge 2: {1}'.format(num_files, global_r2 / num_files))
+    print('Avg. F-1 of {0} samples in rouge 2: {1}'.format(num_files, global_f2 / num_files))
     
 # main method
 if __name__ == "__main__":
     
     # Take path information at runtime
+    # TODO: take argument for training/inference mode
     parser = argparse.ArgumentParser(
         description='DeepMind CNN News - NetSum algorithm')
     parser.add_argument('-t','--text', required=True,
@@ -400,7 +422,11 @@ if __name__ == "__main__":
                         help='Path to the IDF file')
     args = parser.parse_args()
     text_path = args.text
+    if text_path[-1] != '/':
+        text_path += '/'
     summary_path = args.summary
+    if summary_path[-1] != '/':
+        summary_path += '/'
     file_list = args.mirror
     news_words_path = args.idf if args.idf else "/root/nlp_project/cnn/idf.csv"
     
@@ -415,8 +441,8 @@ if __name__ == "__main__":
             has_transformed_data = input("Have you saved transformed data before? (Y/N)")
         if has_transformed_data.lower() == 'y':
             saved_path = input("Please provide the path where the transformed X and Y are:")
-            X_path = os.path.join(saved_path,'features.h5')
-            Y_path = os.path.join(saved_path,'labels.h5')
+            X_path = os.path.join(saved_path,'features.npy')
+            Y_path = os.path.join(saved_path,'label.npy')
             X, Y = load_transformed_data(X_path, Y_path)
         else:
             saved_tranformed_data = input("Do you want to save transformed data? (Y/N)")
