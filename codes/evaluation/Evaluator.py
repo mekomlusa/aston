@@ -30,41 +30,41 @@ class Evaluator:
                 'Christopher Bellitto, a professor of church history at Kean University in New Jersey, noted that Francis announced his new slate of cardinals on the Catholic Feast of the Epiphany, which commemorates the visit of the Magi to Jesus\' birthplace in Bethlehem.', 
                 'Beginning in the 1920s, an increasing number of Latin American churchmen were named cardinals, and in the 1960s, St. John XXIII, whom Francis canonized last year, appointed the first cardinals from Japan, the Philippines and Africa.']
 
-        print "rounge1 without stemming and lemma"
+        print("rounge1 without stemming and lemma")
         [P, R, F] = self.rounge1(pred = predict, test = ground_truth, lemma=False )
         print("P: %s" % P)
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
-        print "rounge1 only with stemming"
+        print("rounge1 only with stemming")
         [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem = True, lemma=False )
-        print "P: %s" % P
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("P: %s" % P)
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
-        print "rounge1 only with lemma"
+        print("rounge1 only with lemma")
         [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem= False, lemma=True )
-        print "P: %s" % P
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("P: %s" % P)
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
-        print "rounge2 without stemming and lemma"
+        print("rounge2 without stemming and lemma")
         [P, R, F] = self.rounge2(pred = predict, test = ground_truth, lemma=False )
-        print "P: %s" % P
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("P: %s" % P)
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
-        print "rounge2 only with lemma"
+        print("rounge2 only with lemma")
         [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem= False, lemma=True )
-        print "P: %s" % P
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("P: %s" % P)
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
-        print "rounge2 only with stemming"
+        print("rounge2 only with stemming")
         [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem=True, lemma=False )
-        print "P: %s" % P
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("P: %s" % P)
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
 
         self.print_rouge_1_2(predict, ground_truth)
