@@ -168,6 +168,8 @@ def main(TEST = True):
     if not os.path.isfile(path):
       continue
     e = mylsa.readFile(path)
+    if len(e.sentences) == 0:
+            continue
     num_sentences += len(e.sentences)
     # print "number of sentences: %s" % len(e.sentences) 
     P_1, R_1, res1, P_2, R_2, res2 = mylsa.test(e)

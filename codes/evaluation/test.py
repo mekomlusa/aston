@@ -9,7 +9,7 @@ def test(cap = 2000):
     list1 = []
     list2 = []
     cnt = 0
-    # cap = 100
+    print("cap is: %s" % cap)
     num_sentences = 0
     sum_p_1 = 0
     sum_r_1 = 0
@@ -67,7 +67,7 @@ def testWithSize():
     list1 = []
     list2 = []
     cnt = 0
-    cap = 2000
+    cap = 200
     interval = 100
     num_sentences = 0
     sum_p_1 = 0
@@ -146,5 +146,5 @@ if __name__ == '__main__':
     # getopt.getopt(args, '')
     
     # args0 is the filename
-    cap = args[1] if len(args) > 1 else 50
+    cap = int(args[1]) if len(args) > 1 else 50
     test(cap)
