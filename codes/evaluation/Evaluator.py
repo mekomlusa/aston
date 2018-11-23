@@ -33,8 +33,8 @@ class Evaluator:
         print "ROUGE1 without stemming and lemma"
         [P, R, F] = self.ROUGE1(pred = predict, test = ground_truth, lemma=False )
         print("P: %s" % P)
-        print "R: %s" % R
-        print "F-1: %s" % F
+        print("R: %s" % R)
+        print("F-1: %s" % F)
 
         print "ROUGE1 only with stemming"
         [P, R, F] = self.ROUGE1(pred = predict, test = ground_truth, stem = True, lemma=False )
