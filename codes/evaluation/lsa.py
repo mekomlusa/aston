@@ -16,6 +16,21 @@ class Example:
 
 class lsa:
 
+  def readTwoFiles(self, txt_file, summary_file):
+    contents = []
+    f = open(txt_file)
+    for line in f:
+      contents.append(line)
+    f.close()
+    summary = '@highlight '
+    with open(summary_file, 'r') as f:
+      summary += f.read()
+    
+    contents.append(summary)
+    return self.words2Example('\n'.join(contents))  
+
+    # pass
+
   def readFile(self, fileName):
     """
      * Code for reading a file. 
@@ -87,8 +102,8 @@ class lsa:
     pred = [e.sentences[i] for i in top_sentences]
     # print pred
     evaluate = Evaluator()
-    [P_1, R_1, F1_1] = evaluate.rounge1(pred = (pred), test = (e.ground_truths) )
-    [P_2, R_2, F1_2] = evaluate.rounge2(pred = (pred), test = (e.ground_truths) )
+    [P_1, R_1, F1_1] = evaluate.ROUGE1(pred = (pred), test = (e.ground_truths) )
+    [P_2, R_2, F1_2] = evaluate.ROUGE2(pred = (pred), test = (e.ground_truths) )
 
     return P_1, R_1, F1_1, P_2, R_2, F1_2
     # print "P: %s" % P
@@ -96,7 +111,7 @@ class lsa:
     # print "F-1: %s" % F
 
     # print "roung2"
-    # [P, R, F] = evaluate.rounge2(pred = (pred), test = (e.ground_truths) )
+    # [P, R, F] = evaluate.ROUGE2(pred = (pred), test = (e.ground_truths) )
 
     # print "P: %s" % P
     # print "R: %s" % R
@@ -119,16 +134,39 @@ def main(TEST = True):
   list1 = []
   list2 = []
   cnt = 0
-  cap = 50
+  # cap = 50
   num_sentences = 0
   sum_p_1 = 0
   sum_r_1 = 0
   sum_p_2 = 0
   sum_r_2 = 0
-  for fname in os.listdir(data_path):
+
+  import csv
+  fs = []
+  dirname = os.path.dirname(os.path.abspath(__file__))
+  filepath = os.path.join(dirname, 'datalist_2K_testing.csv')
+  with open(filepath) as f:
+    csv_reader = csv.reader(f, delimiter=',')
+    num = 0
+    for row in csv_reader:
+      if num == 0:
+        print('column names are %s' % (','.join(row)))
+        num += 1
+      else:
+        name = row[0].split('.')[0] + '.story'
+        fs.append(name)
+        print(name)
+        num+= 1
+    print('processed %s files' % num)
+  # print(fs)
+
+
+  for fname in fs:
     
     path = os.path.join(data_path,fname)
     # print(os.path.getsize(path))
+    if not os.path.isfile(path):
+      continue
     e = mylsa.readFile(path)
     num_sentences += len(e.sentences)
     # print "number of sentences: %s" % len(e.sentences) 
@@ -141,18 +179,18 @@ def main(TEST = True):
     list1.append(res1)
     list2.append(res2)
     cnt += 1
-    if cnt > cap:
-      break
+    # if cnt > cap:
+    #   break
   
   cnt -= 1
   print( 'number of samples: %s' % cnt )
   print('avg number of sentence per sample: %d' % (num_sentences / cnt)  )
-  print 'p_rounge1: %s' % (sum_p_1 / cnt)  
-  print 'r_rounge1: %s' % (sum_r_1 / cnt)
-  print 'p_rounge2: %s' % (sum_p_2 / cnt)  
-  print 'r_rounge2: %s' % (sum_r_2 / cnt)
-  print 'f1_rounge1: %s' % (sum(list1) / cnt)  
-  print 'f1_rounge2: %s' % (sum(list2) / cnt)
+  print 'p_ROUGE1: %s' % (sum_p_1 / cnt)  
+  print 'r_ROUGE1: %s' % (sum_r_1 / cnt)
+  print 'p_ROUGE2: %s' % (sum_p_2 / cnt)  
+  print 'r_ROUGE2: %s' % (sum_r_2 / cnt)
+  print 'f1_ROUGE1: %s' % (sum(list1) / cnt)  
+  print 'f1_ROUGE2: %s' % (sum(list2) / cnt)
 
 if __name__ == "__main__":
   dataDir = os.path.dirname(os.path.abspath(__file__)) + '/cnn_stories/stories/'
@@ -162,12 +200,12 @@ if __name__ == "__main__":
   data directory is: D:\repositories\638nlp\aston\codes\evaluation/cnn_stories/stories/
   number of samples: 50
   avg number of sentence per sample: 32
-  p_rounge1: 0.152357150844
-  r_rounge1: 0.388643769119
-  p_rounge2: 0.055908642393
-  r_rounge2: 0.122941125602
-  f1_rounge1: 0.215715550295
-  f1_rounge2: 0.075921303082
+  p_ROUGE1: 0.152357150844
+  r_ROUGE1: 0.388643769119
+  p_ROUGE2: 0.055908642393
+  r_ROUGE2: 0.122941125602
+  f1_ROUGE1: 0.215715550295
+  f1_ROUGE2: 0.075921303082
   '''
   main(False)
   

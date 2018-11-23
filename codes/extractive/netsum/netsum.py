@@ -310,8 +310,8 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
     global_f2 = 0.0
     
     for i in range(num_files):
-        [p1, r1, f1] = ev.rounge1(all_pred_summary[i], all_actual_summary[i])
-        [p2, r2, f2] = ev.rounge2(all_pred_summary[i], all_actual_summary[i])
+        [p1, r1, f1] = ev.ROUGE1(all_pred_summary[i], all_actual_summary[i])
+        [p2, r2, f2] = ev.ROUGE2(all_pred_summary[i], all_actual_summary[i])
         global_p1 += p1
         global_r1 += r1
         global_f1 += f1
@@ -320,13 +320,13 @@ def test_evaluation_batch(num_files, all_pred_summary, all_actual_summary):
         global_f2 += f2
 
     print('Rouge 1 results')
-    print('Avg. P of {0} samples in rounge 1: {1}'.format(num_files, global_p1 / num_files))
-    print('Avg. R of {0} samples in rounge 1: {1}'.format(num_files, global_r1 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 1: {1}'.format(num_files, global_f1 / num_files))
+    print('Avg. P of {0} samples in ROUGE 1: {1}'.format(num_files, global_p1 / num_files))
+    print('Avg. R of {0} samples in ROUGE 1: {1}'.format(num_files, global_r1 / num_files))
+    print('Avg. F-1 of {0} samples in ROUGE 1: {1}'.format(num_files, global_f1 / num_files))
     print('Rouge 2 results')
-    print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
-    print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
+    print('Avg. P of {0} samples in ROUGE 2: {1}'.format(num_files, global_p2 / num_files))
+    print('Avg. R of {0} samples in ROUGE 2: {1}'.format(num_files, global_r2 / num_files))
+    print('Avg. F-1 of {0} samples in ROUGE 2: {1}'.format(num_files, global_f2 / num_files))
     
 # main method
 if __name__ == "__main__":
