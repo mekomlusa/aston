@@ -232,8 +232,8 @@ def test_evaluation_batch(stories_dir_path, num_files, idf_dict, is_damped=False
         story_file_path = os.path.join(stories_dir_path, story_file)
         cur_sums = lex_rank_process_article_file(story_file_path, idf_dict, is_damped, choice)
         ground_truth_sums = get_ground_truth_sum(story_file_path)
-        [p1, r1, f1] = ev.rounge1(cur_sums, ground_truth_sums)
-        [p2, r2, f2] = ev.rounge2(cur_sums, ground_truth_sums)
+        [p1, r1, f1] = ev.ROUGE1(cur_sums, ground_truth_sums)
+        [p2, r2, f2] = ev.ROUGE2(cur_sums, ground_truth_sums)
         count += 1
         global_p1 += p1
         global_r1 += r1
@@ -245,13 +245,13 @@ def test_evaluation_batch(stories_dir_path, num_files, idf_dict, is_damped=False
             break
 
     print('rouge 1 results')
-    print('Avg. P of {0} samples in rounge 1: {1}'.format(num_files, global_p1 / num_files))
-    print('Avg. R of {0} samples in rounge 1: {1}'.format(num_files, global_r1 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 1: {1}'.format(num_files, global_f1 / num_files))
+    print('Avg. P of {0} samples in ROUGE 1: {1}'.format(num_files, global_p1 / num_files))
+    print('Avg. R of {0} samples in ROUGE 1: {1}'.format(num_files, global_r1 / num_files))
+    print('Avg. F-1 of {0} samples in ROUGE 1: {1}'.format(num_files, global_f1 / num_files))
     print('rouge 2 results')
-    print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
-    print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
+    print('Avg. P of {0} samples in ROUGE 2: {1}'.format(num_files, global_p2 / num_files))
+    print('Avg. R of {0} samples in ROUGE 2: {1}'.format(num_files, global_r2 / num_files))
+    print('Avg. F-1 of {0} samples in ROUGE 2: {1}'.format(num_files, global_f2 / num_files))
 
 
 def summy_lex_rank_process_article_file(file_path):
@@ -291,8 +291,8 @@ def test_sumy_lexrank_pack_batch(stories_dir_path, num_files):
         story_file_path = os.path.join(stories_dir_path, story_file)
         cur_sums = summy_lex_rank_process_article_file(story_file_path)
         ground_truth_sums = get_ground_truth_sum(story_file_path)
-        [p1, r1, f1] = ev.rounge1(cur_sums, ground_truth_sums)
-        [p2, r2, f2] = ev.rounge2(cur_sums, ground_truth_sums)
+        [p1, r1, f1] = ev.ROUGE1(cur_sums, ground_truth_sums)
+        [p2, r2, f2] = ev.ROUGE2(cur_sums, ground_truth_sums)
         count += 1
         global_p1 += p1
         global_r1 += r1
@@ -304,13 +304,13 @@ def test_sumy_lexrank_pack_batch(stories_dir_path, num_files):
             break
 
     print('rouge 1 results')
-    print('Avg. P of {0} samples in rounge 1: {1}'.format(num_files, global_p1 / num_files))
-    print('Avg. R of {0} samples in rounge 1: {1}'.format(num_files, global_r1 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 1: {1}'.format(num_files, global_f1 / num_files))
+    print('Avg. P of {0} samples in ROUGE 1: {1}'.format(num_files, global_p1 / num_files))
+    print('Avg. R of {0} samples in ROUGE 1: {1}'.format(num_files, global_r1 / num_files))
+    print('Avg. F-1 of {0} samples in ROUGE 1: {1}'.format(num_files, global_f1 / num_files))
     print('rouge 2 results')
-    print('Avg. P of {0} samples in rounge 2: {1}'.format(num_files, global_p2 / num_files))
-    print('Avg. R of {0} samples in rounge 2: {1}'.format(num_files, global_r2 / num_files))
-    print('Avg. F-1 of {0} samples in rounge 2: {1}'.format(num_files, global_f2 / num_files))
+    print('Avg. P of {0} samples in ROUGE 2: {1}'.format(num_files, global_p2 / num_files))
+    print('Avg. R of {0} samples in ROUGE 2: {1}'.format(num_files, global_r2 / num_files))
+    print('Avg. F-1 of {0} samples in ROUGE 2: {1}'.format(num_files, global_f2 / num_files))
 
 
 if __name__ == '__main__':
