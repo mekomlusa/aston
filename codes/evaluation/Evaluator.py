@@ -1,5 +1,11 @@
 import re
+"""
+a class for evaluation functions ROUGE1, ROUGE2.
 
+@author: Xichao Chen
+
+python version: 2.7
+"""
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 
 STEMMER = PorterStemmer()
@@ -8,6 +14,14 @@ LEMMATIZER = WordNetLemmatizer()
 class Evaluator:
 
     def sample(self):
+        '''
+        test function for ROUGE1 and ROUGE2 function
+        params:
+        none
+
+        return:
+        non        
+        '''
         ground_truth = ["The 15 new cardinals will be installed on February 14", 
                         "They come from countries such as Myanmar and Tonga",
                         "No Americans made the list this time or the previous time in Francis' papacy"]
@@ -16,38 +30,38 @@ class Evaluator:
                 'Christopher Bellitto, a professor of church history at Kean University in New Jersey, noted that Francis announced his new slate of cardinals on the Catholic Feast of the Epiphany, which commemorates the visit of the Magi to Jesus\' birthplace in Bethlehem.', 
                 'Beginning in the 1920s, an increasing number of Latin American churchmen were named cardinals, and in the 1960s, St. John XXIII, whom Francis canonized last year, appointed the first cardinals from Japan, the Philippines and Africa.']
 
-        print "rounge1 without stemming and lemma"
-        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, lemma=False )
+        print "ROUGE1 without stemming and lemma"
+        [P, R, F] = self.ROUGE1(pred = predict, test = ground_truth, lemma=False )
+        print("P: %s" % P)
+        print("R: %s" % R)
+        print("F-1: %s" % F)
+
+        print "ROUGE1 only with stemming"
+        [P, R, F] = self.ROUGE1(pred = predict, test = ground_truth, stem = True, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
-        print "rounge1 only with stemming"
-        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem = True, lemma=False )
+        print "ROUGE1 only with lemma"
+        [P, R, F] = self.ROUGE1(pred = predict, test = ground_truth, stem= False, lemma=True )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
-        print "rounge1 only with lemma"
-        [P, R, F] = self.rounge1(pred = predict, test = ground_truth, stem= False, lemma=True )
+        print "ROUGE2 without stemming and lemma"
+        [P, R, F] = self.ROUGE2(pred = predict, test = ground_truth, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
-        print "rounge2 without stemming and lemma"
-        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, lemma=False )
+        print "ROUGE2 only with lemma"
+        [P, R, F] = self.ROUGE2(pred = predict, test = ground_truth, stem= False, lemma=True )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
 
-        print "rounge2 only with lemma"
-        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem= False, lemma=True )
-        print "P: %s" % P
-        print "R: %s" % R
-        print "F-1: %s" % F
-
-        print "rounge2 only with stemming"
-        [P, R, F] = self.rounge2(pred = predict, test = ground_truth, stem=True, lemma=False )
+        print "ROUGE2 only with stemming"
+        [P, R, F] = self.ROUGE2(pred = predict, test = ground_truth, stem=True, lemma=False )
         print "P: %s" % P
         print "R: %s" % R
         print "F-1: %s" % F
@@ -56,20 +70,20 @@ class Evaluator:
         self.print_rouge_1_2(predict, ground_truth)
 
     def print_rouge_1_2(self, pred, test):
-        print("rounge1")
-        [p, r, f] = self.rounge1(pred=pred, test=test)
+        print("ROUGE1")
+        [p, r, f] = self.ROUGE1(pred=pred, test=test)
         print("P: %s" % p)
         print("R: %s" % r)
         print("F-1: %s" % f)
 
-        print("rounge2")
-        [p, r, f] = self.rounge2(pred=pred, test=test)
+        print("ROUGE2")
+        [p, r, f] = self.ROUGE2(pred=pred, test=test)
 
         print("P: %s" % p)
         print("R: %s" % r)
         print("F-1: %s" % f)
 
-    def rounge2(self, test, pred, stem = False, lemma = True):
+    def ROUGE2(self, test, pred, stem = False, lemma = True):
         '''
         @params
         test: human made test sentences list of strings
@@ -140,7 +154,7 @@ class Evaluator:
 
         return [pairs, cnt]
 
-    def rounge1(self, test, pred, stem = False, lemma = True):
+    def ROUGE1(self, test, pred, stem = False, lemma = True):
         '''
         @params
         test: human made test sentences list of strings
