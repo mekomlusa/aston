@@ -1,73 +1,22 @@
-# Introduction
+## Introduction
 
-we are going to use singular vector decomposition to extract information from document.
 
-This class LSA and SVD method only applied for single document. 
+In a recent era of big data, text contents are being produced much faster than a human being can consume. According to [Marr](https://www.forbes.com/sites/bernardmarr/2018/05/21/how-much-data-do-we-create-every-day-the-mind-blowing-stats-everyone-should-read/#330c8ef360ba), as of May 2018, there are 16 million text messages, 156 million emails and 456,000 tweets being sent every minute. In addition, modern technologies (e.g. the Internet) produce news in different formats, such as text messages, social media, online subscription... Obviously, we are not able to consume every single news article in its original form. For readers who would prefer to grasp the main ideas, It’s much more efficient to summarize these news articles into shorter texts. However, manual text summarization is tedious and laborious.
 
-## sample
-...
-(CNN)For the second time during his papacy, Pope Francis has announced a new group of bishops and archbishops set to become cardinals -- and they come from all over the world.
 
-...
+With the power of computer, we hope to perform the text summarization task automatically. Automatic text summarization has several advantages over the manual approach, for instances fewer biases and more personalized recommendations. Since news articles are more organized, it is easier to summarize them in a meaningful way. Our team explored several latest methodologies for automatic text summarization and apply it on a large-scale dataset, namely [DeepMind Q&A](https://cs.nyu.edu/~kcho/DMQA/) shared by Google. This dataset contains around 90,000 documents from CNN news. Each document is composed of the body text and human summarized “highlights”. Our goal is to construct a summary comparable with the “highlights” given a news body.
 
-@highlight
 
-The 15 new cardinals will be installed on February 14
+## Usage
 
-@highlight
 
-They come from countries such as Myanmar and Tonga
+First, you may need to download the DMQA dataset and put them under `cnn_stories` folder. Following 4 methods are implemented. Please refer to the codes about how to use them.
 
-@highlight
 
-No Americans made the list this time or the previous time in Francis' papacy
-...
+1. TF-IDF tag based method
+2. Modified LexRank
+3. Latent Semantic Analysis
+4. NetSum
 
-## steps
-* we read a sample file from cnn/sample from cnn/stories;
-* split the sample file into the document part and highlight parts;
-* create an vocabulary x sentence matrix from document;
-* split documents by sentences, and read one by one by counting unique words in the sentence and put that vector into matrix;
-* perform SVD on the matrix;
-* TBD
 
-# Result and Performance
 
-## train the model with all words
-
-## train the model after filtering all stop words from NLTK
-
-## traditional SVD
-
-# ref
-
-https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.linalg.svd.html
-
-SVD in np
-
-'''
-Reconstruction based on full SVD, 2D case:
-
->>>
->>> u, s, vh = np.linalg.svd(a, full_matrices=True)
->>> u.shape, s.shape, vh.shape
-((9, 9), (6,), (6, 6))
->>> np.allclose(a, np.dot(u[:, :6] * s, vh))
-True
->>> smat = np.zeros((9, 6), dtype=complex)
->>> smat[:6, :6] = np.diag(s)
->>> np.allclose(a, np.dot(u, np.dot(smat, vh)))
-True
-
-Reconstruction based on reduced SVD, 2D case:
-
->>>
->>> u, s, vh = np.linalg.svd(a, full_matrices=False)
->>> u.shape, s.shape, vh.shape
-((9, 6), (6,), (6, 6))
->>> np.allclose(a, np.dot(u * s, vh))
-True
->>> smat = np.diag(s)
->>> np.allclose(a, np.dot(u, np.dot(smat, vh)))
-True
-'''
